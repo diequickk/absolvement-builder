@@ -1,3 +1,8 @@
+import { buildNodeMap } from './validation.js';
+import { SOUL_TREE_NODES } from './soulTreeGraph.js';
+import { createInitialState, attemptUnlock, serializeState, hydrateState, reducer as soulTreeStateReducer } from './state.js';
+import { THEME } from './theme.js';
+
 /**
  * Soul Tree Progression Logic
  * ───────────────────────────
@@ -304,9 +309,10 @@ export const NODE_PREREQUISITES = {
  *
  * Checks, in order:
  *  1. All prerequisite nodes are unlocked.
- *  2. No existing selection locks out this node (explicit locksOut).
- *  3. No conflicting sub-path selection exists (mutual exclusivity).
- *  4. SP budget not exceeded (requires nodeMap for cost lookup).
+ *  2. Core path gating is satisfied for sub-path and specialization nodes.
+ *  3. No existing selection locks out this node (explicit locksOut).
+ *  4. No conflicting sub-path selection exists (mutual exclusivity).
+ *  5. SP budget not exceeded (requires nodeMap for cost lookup).
  *
  * @param {string} nodeId - The node the player wants to unlock.
  * @param {Record<string, boolean>} unlockedState - Current tree state.
@@ -315,15 +321,39 @@ export const NODE_PREREQUISITES = {
  * @param {number} spSpent - Current total SP spent.
  * @param {number} spBudget - Max allowed SP (35).
  */
+export function getPathRootId(nodeId, skillPaths) {
+  if (!Array.isArray(skillPaths)) return null;
+
+  for (const path of skillPaths) {
+    const pathRoot = path?.nodes?.[0]?.id;
+    if (!pathRoot) continue;
+
+    if (path.nodes?.some((node) => node.id === nodeId)) {
+      return pathRoot;
+    }
+
+    if (Array.isArray(path.subs)) {
+      for (const sub of path.subs) {
+        if (sub.nodes?.some((node) => node.id === nodeId)) {
+          return pathRoot;
+        }
+      }
+    }
+  }
+
+  return null;
+}
+
 export function canUnlockNode(nodeId, unlockedState, nodeMap, skillPaths, spSpent, spBudget = 35) {
-  const node = nodeMap[nodeId];
+  const effectiveNodeMap = nodeMap || buildNodeMap(SOUL_TREE_NODES);
+  const node = effectiveNodeMap[nodeId];
   if (!node) return { allowed: false, reason: 'Unknown node' };
 
   // 1. Prerequisite check
   const prereqs = NODE_PREREQUISITES[nodeId] ?? [];
   for (const reqId of prereqs) {
     if (!unlockedState[reqId]) {
-      const reqNode = nodeMap[reqId];
+      const reqNode = effectiveNodeMap[reqId];
       return {
         allowed: false,
         reason: `Requires "${reqNode?.name ?? reqId}" first`,
@@ -331,10 +361,20 @@ export function canUnlockNode(nodeId, unlockedState, nodeMap, skillPaths, spSpen
     }
   }
 
+  // 1.a Core path gating: require the path root node before selecting any sub-path or later node
+  const pathRootId = getPathRootId(nodeId, skillPaths);
+  if (pathRootId && nodeId !== pathRootId && !unlockedState[pathRootId]) {
+    const rootNode = effectiveNodeMap[pathRootId];
+    return {
+      allowed: false,
+      reason: `Requires "${rootNode?.name ?? pathRootId}" first`,
+    };
+  }
+
   // 2. Explicit locksOut check (bidirectional)
   for (const otherId of Object.keys(unlockedState)) {
     if (!unlockedState[otherId]) continue;
-    const otherNode = nodeMap[otherId];
+    const otherNode = effectiveNodeMap[otherId];
     if (otherNode?.locksOut?.includes(nodeId)) {
       return { allowed: false, reason: `Locked out by "${otherNode.name}"` };
     }
@@ -342,7 +382,7 @@ export function canUnlockNode(nodeId, unlockedState, nodeMap, skillPaths, spSpen
   if (node.locksOut) {
     for (const lockedId of node.locksOut) {
       if (unlockedState[lockedId]) {
-        return { allowed: false, reason: `Would conflict with "${nodeMap[lockedId]?.name ?? lockedId}"` };
+        return { allowed: false, reason: `Would conflict with "${effectiveNodeMap[lockedId]?.name ?? lockedId}"` };
       }
     }
   }
@@ -425,3 +465,5 @@ export function applyToggle(nodeId, currentState, nodeMap, skillPaths, spSpent, 
     reason: null,
   };
 }
+
+export { createInitialState, attemptUnlock, serializeState, hydrateState, soulTreeStateReducer as reducer, THEME, SOUL_TREE_NODES };
