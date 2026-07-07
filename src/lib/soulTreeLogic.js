@@ -344,6 +344,26 @@ export function getPathRootId(nodeId, skillPaths) {
   return null;
 }
 
+export function getOwningPath(nodeId, skillPaths) {
+  if (!Array.isArray(skillPaths)) return null;
+
+  for (const path of skillPaths) {
+    if (path.nodes?.some((node) => node.id === nodeId)) {
+      return path;
+    }
+
+    if (Array.isArray(path.subs)) {
+      for (const sub of path.subs) {
+        if (sub.nodes?.some((node) => node.id === nodeId)) {
+          return path;
+        }
+      }
+    }
+  }
+
+  return null;
+}
+
 export function canUnlockNode(nodeId, unlockedState, nodeMap, skillPaths, spSpent, spBudget = 35) {
   const effectiveNodeMap = nodeMap || buildNodeMap(SOUL_TREE_NODES);
   const node = effectiveNodeMap[nodeId];
@@ -361,14 +381,18 @@ export function canUnlockNode(nodeId, unlockedState, nodeMap, skillPaths, spSpen
     }
   }
 
-  // 1.a Core path gating: require the path root node before selecting any sub-path or later node
-  const pathRootId = getPathRootId(nodeId, skillPaths);
-  if (pathRootId && nodeId !== pathRootId && !unlockedState[pathRootId]) {
-    const rootNode = effectiveNodeMap[pathRootId];
-    return {
-      allowed: false,
-      reason: `Requires "${rootNode?.name ?? pathRootId}" first`,
-    };
+  // 1.a Core path gating: sub-path / specialization nodes require the full core path to be unlocked first
+  const owningPath = getOwningPath(nodeId, skillPaths);
+  const isSubPathNode = !!owningPath?.subs?.some((sub) => sub.nodes.some((n) => n.id === nodeId));
+  if (isSubPathNode) {
+    const coreNodes = owningPath?.nodes ?? [];
+    const missingCore = coreNodes.find((coreNode) => !unlockedState[coreNode.id]);
+    if (missingCore) {
+      return {
+        allowed: false,
+        reason: `Requires the full core path to be unlocked first (missing "${missingCore.name}")`,
+      };
+    }
   }
 
   // 2. Explicit locksOut check (bidirectional)

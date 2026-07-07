@@ -207,6 +207,12 @@ export default function SkillTree({ selected: skillTree = {}, onChange }) {
             </div>
           </div>
 
+          {activePath.subs?.length > 0 && (
+            <div className="rounded border p-2.5 text-xs" style={{ borderColor: 'rgba(200,200,208,0.16)', background: 'rgba(234,179,8,0.08)', color: '#fbbf24' }}>
+              Specialization paths stay locked until the full core path is unlocked.
+            </div>
+          )}
+
           {/* Core nodes */}
           <div>
             <div className="text-xs mb-2" style={{ color: '#444', fontFamily: 'Cinzel, serif', letterSpacing: '0.1em' }}>

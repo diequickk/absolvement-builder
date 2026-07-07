@@ -219,22 +219,9 @@ export default function SinsAllocator({ sins, onChange }) {
                   )}
 
                   {sin.burden && (
-                    <div className={`mt-2 pl-3 border-l-2 transition-colors ${isActive ? 'border-red-700' : 'border-gray-700'}`}>
-                      <div className="flex items-start gap-2">
-                        <div className={`mt-0.5 w-3 h-3 rounded border flex items-center justify-center flex-shrink-0 transition-colors ${
-                          hasBurden ? 'bg-red-700 border-red-500' : 'bg-transparent border-gray-600'
-                        }`}>
-                          {hasBurden && (
-                            <svg className="w-2 h-2 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                            </svg>
-                          )}
-                        </div>
-                        <div>
-                          <p className="text-red-300 text-xs font-semibold">Burden {!isActive && <span className="text-gray-600">(activate sin to enable)</span>}</p>
-                          <p className="text-gray-400 text-xs">{sin.burden}</p>
-                        </div>
-                      </div>
+                    <div className={`mt-2 inline-flex items-center gap-2 rounded px-2.5 py-1 text-[11px] border ${isActive ? 'border-red-800/60 bg-red-950/30 text-red-300' : 'border-gray-700 bg-zinc-800/50 text-gray-400'}`}>
+                      <span className="font-semibold uppercase tracking-[0.16em]">Burden</span>
+                      <span>{sin.burden}</span>
                     </div>
                   )}
                 </div>

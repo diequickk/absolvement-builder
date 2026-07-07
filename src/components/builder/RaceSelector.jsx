@@ -109,7 +109,7 @@ export default function RaceSelector({ selected, onSelect }) {
             key={race.id}
             className={`cursor-pointer transition-all border-2 ${
               isSelected
-                ? 'border-white bg-black/90 shadow-lg shadow-white/20'
+                ? 'border-red-500/80 bg-zinc-950/95 shadow-[0_0_0_1px_rgba(248,113,113,0.25),0_12px_30px_rgba(127,29,29,0.35)]'
                 : 'border-gray-600 bg-zinc-900/50 hover:border-gray-500'
             }`}
             onClick={() => onSelect(race.id)}
@@ -127,25 +127,36 @@ export default function RaceSelector({ selected, onSelect }) {
                 <div className="flex-1">
                   <h3 className="text-xl font-bold text-white mb-1">{race.name}</h3>
                   <p className="text-slate-400 text-sm mb-3">{race.description}</p>
-                  <div className="space-y-1">
-                    {race.bonuses.map((bonus, idx) => (
-                      <Badge
-                        key={`bonus-${idx}`}
-                        variant="secondary"
-                        className="bg-zinc-800/50 text-gray-200 text-xs mr-1 mb-1"
-                      >
-                        {bonus}
-                      </Badge>
-                    ))}
-                    {race.debuffs && race.debuffs.map((debuff, idx) => (
-                      <Badge
-                        key={`debuff-${idx}`}
-                        variant="secondary"
-                        className="bg-red-950/50 text-red-300 text-xs mr-1 mb-1"
-                      >
-                        {debuff}
-                      </Badge>
-                    ))}
+                  <div className="space-y-2">
+                    <div className="flex flex-wrap gap-1">
+                      {race.bonuses.map((bonus, idx) => (
+                        <Badge
+                          key={`bonus-${idx}`}
+                          variant="secondary"
+                          className="bg-zinc-800/50 text-gray-200 text-xs"
+                        >
+                          {bonus}
+                        </Badge>
+                      ))}
+                    </div>
+                    {race.debuffs && race.debuffs.length > 0 && (
+                      <div className="space-y-1">
+                        <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-red-400/90">
+                          Debuffs
+                        </div>
+                        <div className="flex flex-wrap gap-1">
+                          {race.debuffs.map((debuff, idx) => (
+                            <Badge
+                              key={`debuff-${idx}`}
+                              variant="secondary"
+                              className="border border-red-700/70 bg-red-950/80 text-red-200 text-xs shadow-[inset_0_0_0_1px_rgba(248,113,113,0.15)]"
+                            >
+                              {debuff}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Lock, X, Search, ChevronDown, ChevronUp, Plus, Check } from "lucide-react";
-import { SKILLS, SKILL_ELEMENTS } from "./skillsData";
+import { SKILLS, SKILL_ELEMENTS, SKILL_PATHS } from "./skillsData";
 
 const RACE_SKILLS = {
   aranae: { name: 'Web Snare', description: 'Entangle an enemy in webs, preventing dodging and slowing them for 3 seconds.' },
@@ -20,44 +20,230 @@ const RACE_SKILLS = {
 };
 
 const RARITY_COLORS = {
-  Common: 'bg-gray-700 text-gray-300',
-  Uncommon: 'bg-green-900/60 text-green-300',
-  Rare: 'bg-blue-900/60 text-blue-300',
-  Unique: 'bg-purple-900/60 text-purple-300',
-  Mythical: 'bg-yellow-900/60 text-yellow-300',
+  Common: 'bg-gray-800/70 text-gray-200 border border-gray-500/40',
+  Uncommon: 'bg-green-900/60 text-green-300 border border-green-500/40',
+  Rare: 'bg-blue-900/60 text-blue-300 border border-blue-500/40',
+  Unique: 'bg-pink-900/60 text-pink-300 border border-pink-500/40',
+  Mythical: 'bg-yellow-900/60 text-yellow-300 border border-yellow-500/40',
   Advanced: 'bg-orange-900/60 text-orange-300',
   Intermediate: 'bg-cyan-900/60 text-cyan-300',
 };
 
-const ELEMENT_COLORS = {
-  Physical: 'bg-zinc-700 text-zinc-200',
-  Fire: 'bg-red-900/60 text-red-300',
-  Frost: 'bg-cyan-900/60 text-cyan-300',
-  Shadow: 'bg-purple-900/60 text-purple-300',
-  Lightning: 'bg-yellow-900/60 text-yellow-300',
-  Wind: 'bg-teal-900/60 text-teal-300',
-  Water: 'bg-blue-900/60 text-blue-300',
-  Nature: 'bg-green-900/60 text-green-300',
-  Disease: 'bg-lime-900/60 text-lime-300',
-  Holy: 'bg-amber-900/60 text-amber-300',
-  Earth: 'bg-orange-900/60 text-orange-300',
-  Arcane: 'bg-fuchsia-900/60 text-fuchsia-300',
-  Hybrid: 'bg-rose-900/60 text-rose-300',
+const DEFAULT_ELEMENT_COLOR = '#71717a';
+const HYBRID_ELEMENT_COLOR = '#DA70D6';
+const ARCANE_ELEMENT_COLOR = '#9370DB';
+const FIRE_ELEMENT_COLOR = '#FF2A00';
+
+function normalizeElementKey(element) {
+  const value = typeof element === 'string' ? element.trim() : '';
+  if (!value) return '';
+  return value.charAt(0).toUpperCase() + value.slice(1).toLowerCase();
+}
+
+const RARITY_BORDER_COLORS = {
+  Common: '#9CA3AF',
+  Uncommon: '#22C55E',
+  Rare: '#3B82F6',
+  Unique: '#EC4899',
+  Mythical: '#FACC15',
 };
 
-const TIER_ORDER = ['Basic', 'Intermediate', 'Advanced', 'Masterful', 'Support', 'Special', 'Legendary'];
+const RARITY_BY_SKILL_NAME = (() => {
+  const map = {};
+
+  const add = (rarity, names) => {
+    names.forEach((name) => {
+      map[name] = rarity;
+    });
+  };
+
+  add('Common', [
+    'Disarm', 'Reverse Slice', 'Multi-Shot', 'Reckless Leap', 'Serrated Arrow', 'Tendon Slice', 'Pierce',
+    'Ash Stomp',
+    'Ice Clone', 'Preservation',
+    'Distract', 'Gouge', 'Shadowstep',
+    'Static Shock',
+    'Wind Blast', 'Sweet Symphony', 'Updraft',
+    'Scald',
+    'Bulb Sprout', 'Poison Arrow',
+    'Decaying Slice',
+    'Light Steps', 'Lesser Heal', 'Sunbeam', 'Smite',
+    'Earthen Wall',
+  ]);
+
+  add('Uncommon', [
+    'Explosive Arrow',
+    'Icicle Eruption', 'Ice Blades',
+    'Short Out', 'Thunderstrike', 'Magnetic Pulse',
+    'Disorient',
+    'Trident Throw', 'Aqua Prison', 'Healing Waters',
+    'Swarm', 'Bloom', 'Envenom', 'Root Burst',
+    'Famine', 'Black Death',
+    'Stone Spike', 'Earth Headbutt',
+    'Holy Mirror', 'Whirling Blades', 'Sorrow',
+  ]);
+
+  add('Rare', [
+    'Execute', 'Focus Shot', 'Bloodlust', 'Rush',
+    'Flame Ring', 'Gunpowder Barrel', 'Flame Smash', 'Fire Blast', 'Cataclysm',
+    'Cold Breath', 'Subzero Slam', 'Frost Nova',
+    'Darkness', 'Shadow Garrote', 'Null', 'Void Dagger', 'Enfeeble', 'Stealth', 'Shackle', 'Hunt',
+    'Static Orb', 'Open Circuit', 'Shock Grenade', 'Chain Lightning',
+    'Pressure', 'Windweaver', 'Slicing Winds', 'Vortex',
+    'Riptide', 'Crushing Depths', 'Crashing Wave', 'Geyser',
+    'Symbiosis', 'Sporeblossom', 'Encroaching Vines', 'Ironbark',
+    'Fetid Strike', 'Pestulence',
+    'Crusading Strike', 'Zeal', 'Persecution', 'Enlightenment', 'Reflection', 'Judgement', 'Holy Wrath',
+    'Stoneskin', 'Shatter', 'Crystalline Eruption', 'Curse of Stone', 'Gaia Fist',
+    'Glacial Rot',
+  ]);
+
+  add('Unique', [
+    'Cleave', 'Rapid Fire', 'Volley', 'Shoulder Slam', 'Bear Trap', 'War Banner', 'Rally',
+    'Ignition', 'Whirling Flames',
+    'Frozen Uppercut', 'Frost Femur Breaker',
+    'Haunt', 'Night Slash', 'Reap',
+    'Shock Sweep',
+    'Palm Strike', 'Wind Vortex', 'Hypoxia',
+    'Hydrolance', 'Flood', 'Whirlpool',
+    'Briarclash',
+    'Ad Mortum', 'Blood Plague', 'Necrotic Rot',
+    'Rupture', 'Radiant Light',
+    'Quicksand',
+    'Holy Flame Charge', 'Rotshade Bolt', 'Obsidian Obelisk', 'Plasma Line', 'Shadowflame Eruption', 'Thunderclap',
+  ]);
+
+  add('Mythical', [
+    'Chain Pull',
+    'Overheat',
+    'Everwinter',
+    'Regicide',
+    'Electric Barrage',
+    'Suffocation',
+    'Broadside',
+    "Nature's Embrace", 'Regeneration',
+    'Necropolis', 'Apocalypse', 'Desecrate',
+    'Bless', 'Rune of Protection',
+    'Uproot',
+    'Arcane Arrow', 'Soul Burst', 'Arcane Gateway',
+    'Ground Bullet', 'Frozen Cry Pierce',
+  ]);
+
+  return map;
+})();
+
+function hexToRgba(hex, alpha) {
+  const clean = (hex || '').replace('#', '');
+  if (clean.length !== 6) return `rgba(113,113,122,${alpha})`;
+
+  const r = parseInt(clean.slice(0, 2), 16);
+  const g = parseInt(clean.slice(2, 4), 16);
+  const b = parseInt(clean.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+function blendHexColors(hexA, hexB, weight = 0.5) {
+  const parseHex = (hex) => {
+    const clean = (hex || '').replace('#', '');
+    if (clean.length !== 6) return [113, 113, 122];
+    return [
+      parseInt(clean.slice(0, 2), 16),
+      parseInt(clean.slice(2, 4), 16),
+      parseInt(clean.slice(4, 6), 16),
+    ];
+  };
+
+  const [ar, ag, ab] = parseHex(hexA);
+  const [br, bg, bb] = parseHex(hexB);
+  const w = Math.max(0, Math.min(1, weight));
+
+  const r = Math.round(ar * (1 - w) + br * w);
+  const g = Math.round(ag * (1 - w) + bg * w);
+  const b = Math.round(ab * (1 - w) + bb * w);
+
+  return `#${[r, g, b].map((v) => v.toString(16).padStart(2, '0')).join('')}`;
+}
+
+const ELEMENT_COLOR_MAP = (() => {
+  const map = {};
+
+  for (const path of SKILL_PATHS) {
+    const categoryKey = normalizeElementKey(path.category);
+    if (categoryKey && path.color && !map[categoryKey]) {
+      map[categoryKey] = path.color;
+    }
+  }
+
+  map[normalizeElementKey('Fire')] = FIRE_ELEMENT_COLOR;
+  map[normalizeElementKey('Arcane')] = ARCANE_ELEMENT_COLOR;
+  map[normalizeElementKey('Hybrid')] = HYBRID_ELEMENT_COLOR;
+  return map;
+})();
+
+function getElementColor(element) {
+  return ELEMENT_COLOR_MAP[normalizeElementKey(element)] || DEFAULT_ELEMENT_COLOR;
+}
+
+function getElementBadgeStyle(element) {
+  const color = getElementColor(element);
+  return {
+    borderColor: hexToRgba(color, 0.45),
+    background: hexToRgba(color, 0.2),
+    color,
+  };
+}
+
+function getElementFilterStyle(element, isActive) {
+  const color = getElementColor(element);
+  return {
+    borderColor: isActive ? hexToRgba(color, 0.6) : 'rgba(90,90,98,0.6)',
+    background: isActive ? hexToRgba(color, 0.24) : 'rgba(0,0,0,0.35)',
+    color: isActive ? color : '#9ca3af',
+  };
+}
+
+const RARITY_ORDER = ['Mythical', 'Unique', 'Rare', 'Uncommon', 'Common'];
+
+function getSkillRarity(skill) {
+  return RARITY_BY_SKILL_NAME[skill.name] || 'Common';
+}
+
+function getSkillCardBorderStyle(skill, isSelected) {
+  const elementColor = getElementColor(skill.element);
+  const rarity = getSkillRarity(skill);
+  const rarityColor = RARITY_BORDER_COLORS[rarity] || '#9CA3AF';
+  const blended = blendHexColors(elementColor, rarityColor, 0.52);
+
+  if (isSelected) {
+    return {
+      borderColor: hexToRgba(elementColor, 0.95),
+      background: `linear-gradient(135deg, ${hexToRgba(elementColor, 0.14)} 0%, ${hexToRgba(rarityColor, 0.18)} 100%)`,
+      boxShadow: `0 0 0 1px ${hexToRgba(blended, 0.28)} inset`,
+    };
+  }
+
+  return {
+    borderColor: hexToRgba(elementColor, 0.72),
+    background: `linear-gradient(135deg, ${hexToRgba(elementColor, 0.04)} 0%, ${hexToRgba(rarityColor, 0.09)} 100%)`,
+  };
+}
+
+function getRarityBadgeStyle(rarity) {
+  const color = RARITY_BORDER_COLORS[rarity] || '#9CA3AF';
+  return {
+    borderColor: hexToRgba(color, 0.52),
+    background: hexToRgba(color, 0.18),
+    color,
+  };
+}
 
 function SkillCard({ skill, isSelected, onToggle }) {
   const [expanded, setExpanded] = useState(false);
+  const rarity = getSkillRarity(skill);
+  const cardStyle = getSkillCardBorderStyle(skill, isSelected);
 
   return (
-    <div
-      className={`rounded border transition-all ${
-        isSelected
-          ? 'border-white/30 bg-white/5'
-          : 'border-gray-800 bg-black/30 hover:border-gray-600'
-      }`}
-    >
+    <div className="rounded border transition-all hover:brightness-110" style={cardStyle}>
       <div
         className="flex items-start gap-3 p-3 cursor-pointer"
         onClick={() => onToggle(skill)}
@@ -75,17 +261,21 @@ function SkillCard({ skill, isSelected, onToggle }) {
             )}
           </div>
           <div className="flex flex-wrap gap-1 mb-1.5">
-            <Badge className={`text-[10px] px-1.5 py-0 ${ELEMENT_COLORS[skill.element] || 'bg-zinc-700 text-zinc-300'}`}>
+            <Badge
+              className="text-[10px] px-1.5 py-0 border"
+              style={getElementBadgeStyle(skill.element)}
+            >
               {skill.element}
             </Badge>
-            <Badge className="text-[10px] px-1.5 py-0 bg-zinc-800 text-zinc-400">
-              {skill.tier}
+            <Badge className="text-[10px] px-1.5 py-0 border" style={getRarityBadgeStyle(rarity)}>
+              {rarity}
             </Badge>
           </div>
           <p className="text-gray-400 text-xs leading-relaxed line-clamp-2">{skill.description}</p>
         </div>
         {skill.upgrades.length > 0 && (
           <button
+            type="button"
             className="text-gray-500 hover:text-gray-300 flex-shrink-0 mt-0.5"
             onClick={(e) => { e.stopPropagation(); setExpanded(v => !v); }}
           >
@@ -152,14 +342,22 @@ export default function Skills({ selected, onChange, race }) {
     });
   }, [search, elementFilter]);
 
-  // Group by element then tier
+  // Group by element then rarity
   const grouped = useMemo(() => {
     const map = {};
     filteredSkills.forEach(s => {
+      const rarity = getSkillRarity(s);
       if (!map[s.element]) map[s.element] = {};
-      if (!map[s.element][s.tier]) map[s.element][s.tier] = [];
-      map[s.element][s.tier].push(s);
+      if (!map[s.element][rarity]) map[s.element][rarity] = [];
+      map[s.element][rarity].push(s);
     });
+
+    Object.values(map).forEach((rarityMap) => {
+      Object.values(rarityMap).forEach((skills) => {
+        skills.sort((a, b) => a.name.localeCompare(b.name));
+      });
+    });
+
     return map;
   }, [filteredSkills]);
 
@@ -227,12 +425,18 @@ export default function Skills({ selected, onChange, race }) {
               <button
                 key={el}
                 onClick={() => setElementFilter(el)}
-                className={`text-xs px-2 py-1 rounded border transition-all ${
-                  elementFilter === el
-                    ? 'border-white/30 bg-white/10 text-white'
-                    : 'border-gray-700 text-gray-500 hover:border-gray-500 hover:text-gray-300'
-                }`}
-                style={{ fontFamily: 'Cinzel, serif', letterSpacing: '0.05em' }}
+                className="text-xs px-2 py-1 rounded border transition-all hover:brightness-110"
+                style={{
+                  ...(el === 'All'
+                    ? {
+                        borderColor: elementFilter === el ? 'rgba(255,255,255,0.3)' : 'rgba(90,90,98,0.6)',
+                        background: elementFilter === el ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.35)',
+                        color: elementFilter === el ? '#ffffff' : '#9ca3af',
+                      }
+                    : getElementFilterStyle(el, elementFilter === el)),
+                  fontFamily: 'Cinzel, serif',
+                  letterSpacing: '0.05em',
+                }}
               >
                 {el}
               </button>
@@ -243,23 +447,23 @@ export default function Skills({ selected, onChange, race }) {
 
       {/* Skill list */}
       <div className="space-y-6">
-        {Object.entries(grouped).map(([element, tiers]) => (
+        {Object.entries(grouped).map(([element, rarities]) => (
           <div key={element}>
             <div className="flex items-center gap-3 mb-3">
               <div className="h-px flex-1 bg-gradient-to-r from-transparent to-gray-800" />
-              <Badge className={`text-xs ${ELEMENT_COLORS[element] || 'bg-zinc-700 text-zinc-300'}`}>
+              <Badge className="text-xs border" style={getElementBadgeStyle(element)}>
                 {element}
               </Badge>
               <div className="h-px flex-1 bg-gradient-to-l from-transparent to-gray-800" />
             </div>
             <div className="space-y-4">
-              {TIER_ORDER.filter(t => tiers[t]).map(tier => (
-                <div key={tier}>
+              {RARITY_ORDER.filter(rarity => rarities[rarity]).map((rarity) => (
+                <div key={rarity}>
                   <p className="text-gray-600 text-[10px] uppercase tracking-widest mb-2 pl-1">
-                    {tier}
+                    {rarity}
                   </p>
                   <div className="space-y-2">
-                    {tiers[tier].map(skill => (
+                    {rarities[rarity].map(skill => (
                       <SkillCard
                         key={skill.id}
                         skill={skill}

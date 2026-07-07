@@ -75,7 +75,7 @@ const NODE_MAP = buildNodeMap();
 const SKILL_MAP = {};
 for (const s of SKILLS) SKILL_MAP[s.id] = s;
 
-export default function BuildSummary({ buildName, race, weapon, sins, relics, skillTree, skills, potentials }) {
+export default function BuildSummary({ buildName, currentBuildCode, race, weapon, sins, relics, skillTree, skills, potentials }) {
   const activeSins = Object.keys(sins || {}).filter(k => sins[k]?.active);
   const totalSinPoints = activeSins.length;
   const fragmentBonus = totalSinPoints * 12;
@@ -111,6 +111,16 @@ export default function BuildSummary({ buildName, race, weapon, sins, relics, sk
         <p style={{ color: buildName ? '#e8e8f0' : '#333', fontStyle: buildName ? 'normal' : 'italic', fontSize: '0.85rem', fontFamily: 'Cinzel, serif', letterSpacing: '0.05em', marginTop: '4px' }}>
           {buildName || 'Unnamed Build'}
         </p>
+        {currentBuildCode && (
+          <div className="mt-3 rounded border px-3 py-2" style={{ borderColor: 'rgba(34,211,238,0.22)', background: 'rgba(8,145,178,0.08)' }}>
+            <div style={{ color: '#67e8f9', fontSize: '0.62rem', letterSpacing: '0.16em', textTransform: 'uppercase', fontFamily: 'Cinzel, serif' }}>
+              Build Code:
+            </div>
+            <div className="mt-1 select-all break-all font-mono text-sm" style={{ color: '#cffafe' }}>
+              {currentBuildCode}
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="px-5 py-4 space-y-3.5">

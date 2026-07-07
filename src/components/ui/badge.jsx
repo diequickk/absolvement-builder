@@ -8,11 +8,20 @@ const badgeVariants = {
   accent: 'bg-sky-400/10 border border-sky-400/20 text-sky-200',
 };
 
-export const Badge = ({ children, variant = 'default', className = '', ...props }) => (
-  <span
-    className={`inline-flex items-center rounded-none px-3 py-1.5 text-[0.65rem] font-semibold tracking-[0.18em] uppercase ${badgeVariants[variant] || badgeVariants.default} ${className}`}
-    {...props}
-  >
-    {children}
-  </span>
-);
+// We use "export const" so named imports still work
+export const Badge = ({ children, variant = 'default', className = '', ...props }) => {
+  // Added a safety check: if the variant doesn't exist, it falls back to 'default'
+  const variantClass = badgeVariants[variant] || badgeVariants.default;
+  
+  return (
+    <span
+      className={`inline-flex items-center rounded-none px-3 py-1.5 text-[0.65rem] font-semibold tracking-[0.18em] uppercase ${variantClass} ${className}`}
+      {...props}
+    >
+      {children}
+    </span>
+  );
+};
+
+// We also use "export default" so default imports work too
+export default Badge;

@@ -88,7 +88,7 @@ export default function BuildCalculator() {
 
               {/* Dynamic Content Views Panel Elements Mapping */}
               {activeTab === 'race' && <RaceSelector onSelect={setSelectedRace} active={selectedRace} />}
-              {activeTab === 'weapon' && <WeaponSelector onSelect={setSelectedWeapon} active={selectedWeapon} />}
+              {activeTab === 'weapon' && <WeaponSelector selected={selectedWeapon} onSelect={setSelectedWeapon} />}
               {activeTab === 'sins' && <SinsAllocator onChange={setAllocatedSins} values={allocatedSins} />}
               {activeTab === 'relics' && <RelicsSelector onChange={setSelectedRelics} active={selectedRelics} />}
               {activeTab === 'skills' && <Skills onChange={setSelectedSkills} active={selectedSkills} />}

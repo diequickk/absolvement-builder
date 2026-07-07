@@ -1,11 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
 import { Card } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
-import { Link } from "lucide-react";
+import { Save, Share2, FileDown, Copy, Link } from "lucide-react";
+import { compressToEncodedURIComponent, decompressFromEncodedURIComponent } from "lz-string";
+import { base44 } from "../api/base44Client";
 import { toast } from "../lib/toast";
-import { compressToEncodedURIComponent, decompressFromEncodedURIComponent } from 'lz-string';
 import OilBackground from "../components/OilBackground";
 import RaceSelector from "../components/builder/RaceSelector";
 import WeaponSelector from "../components/builder/WeaponSelector";
@@ -16,73 +17,74 @@ import Skills from "../components/builder/Skills";
 import PotentialsPanel from "../components/builder/PotentialsPanel";
 import BuildSummary from "../components/builder/BuildSummary";
 
-const BUILD_CACHE_PREFIX = 'absolvement-build:';
-const SHARE_PAYLOAD_PARAM = 'd';
-
-function getIdValue(value) {
-  if (!value) return null;
-  if (typeof value === 'string') return value;
-  if (typeof value === 'object') return value.id || value.name || null;
-  return null;
-}
-
 function compactBuildState(buildState) {
   const compactState = {};
 
+  // Keep only tiny ID-like values in the shared payload.
   if (buildState.buildName?.trim()) compactState.n = buildState.buildName.trim();
-  const raceId = getIdValue(buildState.race);
-  if (raceId) compactState.a = raceId;
+  if (buildState.race) compactState.a = buildState.race;
 
-  const weaponId = getIdValue(buildState.weapon);
-  if (weaponId) compactState.w = weaponId;
+  // Weapon: id string only
+  if (buildState.weapon?.id) {
+    compactState.w = buildState.weapon.id;
+  } else if (typeof buildState.weapon === 'string') {
+    compactState.w = buildState.weapon;
+  }
 
+  // Sins: array of active sin IDs
   const activeSins = Object.entries(buildState.sins || {})
-    .filter(([, value]) => value?.active)
+    .filter(([_, value]) => value?.active)
     .map(([key]) => key);
   if (activeSins.length > 0) compactState.s = [...new Set(activeSins)];
 
+  // Relics: array of relic IDs
   if (Array.isArray(buildState.relics) && buildState.relics.length > 0) {
-    compactState.r = [...new Set(buildState.relics.map(getIdValue).filter(Boolean))];
+    compactState.r = [...new Set(buildState.relics
+      .map((relic) => (typeof relic === 'object' ? (relic.id || relic.name) : relic))
+      .filter(Boolean))];
   }
 
+  // Skill tree: array of unlocked node IDs
   const unlockedNodes = Object.entries(buildState.skillTree || {})
-    .filter(([, value]) => Boolean(value))
+    .filter(([_, value]) => Boolean(value))
     .map(([key]) => key);
   if (unlockedNodes.length > 0) compactState.t = [...new Set(unlockedNodes)];
 
+  // Skills: array of skill IDs
   if (Array.isArray(buildState.skills) && buildState.skills.length > 0) {
-    compactState.k = [...new Set(buildState.skills.map(getIdValue).filter(Boolean))];
+    compactState.k = [...new Set(buildState.skills.map((skill) => {
+      if (!skill) return null;
+      return typeof skill === 'object' ? (skill.id || skill.name) : skill;
+    }).filter(Boolean))];
   }
 
+  // Potentials: array of potential IDs
   if (Array.isArray(buildState.potentials) && buildState.potentials.length > 0) {
-    compactState.p = [...new Set(buildState.potentials.map(getIdValue).filter(Boolean))];
+    compactState.p = [...new Set(buildState.potentials.map((pot) => {
+      if (!pot) return null;
+      return typeof pot === 'object' ? (pot.id || pot.name) : pot;
+    }).filter(Boolean))];
   }
 
   return compactState;
 }
+
+
 
 function expandBuildState(buildData) {
   const sinIds = Array.isArray(buildData.s)
     ? buildData.s
     : Object.keys(buildData.sins || {}).filter((id) => buildData.sins?.[id]?.active);
 
+  const legacyRace = typeof buildData.r === 'string' ? buildData.r : null;
+  const compactRelics = Array.isArray(buildData.r) ? buildData.r : null;
+
   const sinsObject = sinIds.reduce((acc, id) => {
     acc[id] = { active: true, burden: true };
     return acc;
   }, {});
 
-  const relicsArray = Array.isArray(buildData.r)
-    ? buildData.r
-    : Array.isArray(buildData.relics)
-      ? buildData.relics
-      : [];
-
-  const treeArray = Array.isArray(buildData.t)
-    ? buildData.t
-    : buildData.skill_tree && typeof buildData.skill_tree === 'object'
-      ? Object.keys(buildData.skill_tree).filter((key) => buildData.skill_tree[key])
-      : [];
-
+  const treeArray = Array.isArray(buildData.t) ? buildData.t : [];
   const treeObject = treeArray.reduce((acc, id) => {
     acc[id] = true;
     return acc;
@@ -90,99 +92,14 @@ function expandBuildState(buildData) {
 
   return {
     buildName: buildData.n ?? buildData.build_name ?? "",
-    race: buildData.a ?? buildData.race ?? null,
+    race: buildData.a ?? legacyRace ?? buildData.race ?? null,
     weapon: buildData.w ?? buildData.weapon ?? null,
     sins: Object.keys(sinsObject).length ? sinsObject : (buildData.sins ?? {}),
-    relics: relicsArray,
+    relics: compactRelics ?? buildData.rl ?? buildData.relics ?? [],
     skillTree: Object.keys(treeObject).length ? treeObject : (buildData.skill_tree ?? {}),
-    skills: buildData.k ?? buildData.skills ?? [],
+    skills: buildData.k ?? buildData.sk ?? buildData.skills ?? [],
     potentials: buildData.p ?? buildData.potentials ?? [],
   };
-}
-
-function createRoomCode(length = 8) {
-  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  const values = new Uint32Array(length);
-  window.crypto.getRandomValues(values);
-  return Array.from(values, (value) => alphabet[value % alphabet.length]).join('');
-}
-
-function getCachedBuildData(roomCode) {
-  try {
-    const raw = window.localStorage.getItem(`${BUILD_CACHE_PREFIX}${roomCode}`);
-    return raw ? JSON.parse(raw) : null;
-  } catch (error) {
-    return null;
-  }
-}
-
-function setCachedBuildData(roomCode, buildData) {
-  try {
-    window.localStorage.setItem(`${BUILD_CACHE_PREFIX}${roomCode}`, JSON.stringify(buildData));
-  } catch (error) {
-    // Ignore storage failures and fall back to the clipboard/link.
-  }
-}
-
-function encodeBuildDataForShare(buildData) {
-  return compressToEncodedURIComponent(JSON.stringify(buildData));
-}
-
-function decodeBuildDataFromShare(encodedPayload) {
-  if (!encodedPayload) return null;
-
-  try {
-    const decodedJson = decompressFromEncodedURIComponent(encodedPayload);
-    return decodedJson ? JSON.parse(decodedJson) : null;
-  } catch (error) {
-    return null;
-  }
-}
-
-function extractSharedBuildData(shareText) {
-  if (!shareText || typeof shareText !== 'string') return null;
-
-  try {
-    const shareUrl = new URL(shareText);
-    const encodedPayload = shareUrl.searchParams.get(SHARE_PAYLOAD_PARAM);
-    const buildData = decodeBuildDataFromShare(encodedPayload);
-    if (buildData) {
-      return buildData;
-    }
-  } catch (error) {
-    // Fall through and try a loose parameter parse.
-  }
-
-  const encodedMatch = shareText.match(new RegExp(`[?&]${SHARE_PAYLOAD_PARAM}=([^&\s]+)`));
-  if (!encodedMatch?.[1]) return null;
-
-  return decodeBuildDataFromShare(decodeURIComponent(encodedMatch[1]));
-}
-
-async function readClipboardText() {
-  try {
-    return await navigator.clipboard.readText();
-  } catch (error) {
-    return '';
-  }
-}
-
-async function copyToClipboard(text) {
-  try {
-    await navigator.clipboard.writeText(text);
-    return true;
-  } catch (error) {
-    const fallbackField = document.createElement('textarea');
-    fallbackField.value = text;
-    fallbackField.setAttribute('readonly', 'true');
-    fallbackField.style.position = 'fixed';
-    fallbackField.style.opacity = '0';
-    document.body.appendChild(fallbackField);
-    fallbackField.select();
-    const copied = document.execCommand('copy');
-    document.body.removeChild(fallbackField);
-    return copied;
-  }
 }
 
 export default function Builder() {
@@ -194,134 +111,92 @@ export default function Builder() {
   const [skillTree, setSkillTree] = useState({});
   const [skills, setSkills] = useState([]);
   const [potentials, setPotentials] = useState([]);
-  const [currentBuildCode, setCurrentBuildCode] = useState("");
-  const [codeInput, setCodeInput] = useState("");
-  const [shareLink, setShareLink] = useState("");
 
-  const applyBuildData = (buildData, code = "") => {
-    const nextState = expandBuildState(buildData);
-
-    setBuildName(nextState.buildName || "");
-    setRace(nextState.race || null);
-    setWeapon(nextState.weapon || null);
-    setSins(nextState.sins || {});
-    setRelics(nextState.relics || []);
-    setSkillTree(nextState.skillTree || {});
-    setSkills(nextState.skills || []);
-    setPotentials(nextState.potentials || []);
-
-    if (code) {
-      setCurrentBuildCode(code);
-    }
-  };
-
-  const loadBuildByCode = async (roomCode) => {
-    const normalizedCode = typeof roomCode === 'string' ? roomCode.trim() : '';
-
-    if (normalizedCode) {
-      const cachedBuild = getCachedBuildData(normalizedCode);
-      if (cachedBuild) {
-        applyBuildData(cachedBuild, normalizedCode);
-        toast.success("Build loaded from code!");
-        return;
-      }
-    }
-
-    const clipboardText = await readClipboardText();
-    const sharedBuildData = extractSharedBuildData(clipboardText);
-
-    if (sharedBuildData) {
-      let sharedCode = normalizedCode;
-      if (!sharedCode) {
-        try {
-          sharedCode = new URL(clipboardText).searchParams.get('b') || '';
-        } catch (error) {
-          sharedCode = '';
-        }
-      }
-
-      if (sharedCode) {
-        setCachedBuildData(sharedCode, sharedBuildData);
-      }
-
-      applyBuildData(sharedBuildData, sharedCode);
-      toast.success("Build loaded from share link!");
-      return;
-    }
-
-    if (!normalizedCode) {
-      toast.error("Please enter a build code");
-      return;
-    }
-
-    toast.error("Could not load that build code");
-  };
-
+  // Load build from URL on mount
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const roomCode = params.get('b') || '';
-    const encodedPayload = params.get(SHARE_PAYLOAD_PARAM);
-
-    if (encodedPayload) {
-      const buildData = decodeBuildDataFromShare(encodedPayload);
-      if (buildData) {
-        applyBuildData(buildData, roomCode);
-        if (roomCode) {
-          setCodeInput(roomCode);
-          setCurrentBuildCode(roomCode);
-          setCachedBuildData(roomCode, buildData);
-        }
+    const buildParam = params.get('build');
+    if (buildParam) {
+      try {
+        const decompressed = decompressFromEncodedURIComponent(buildParam);
+        const buildData = JSON.parse(decompressed || '{}');
+        const nextState = expandBuildState(buildData);
+        if (nextState.buildName) setBuildName(nextState.buildName);
+        if (nextState.race) setRace(nextState.race);
+        if (nextState.weapon) setWeapon(nextState.weapon);
+        if (Object.keys(nextState.sins).length > 0) setSins(nextState.sins);
+        if (nextState.relics.length > 0) setRelics(nextState.relics);
+        if (Object.keys(nextState.skillTree).length > 0) setSkillTree(nextState.skillTree);
+        if (nextState.skills.length > 0) setSkills(nextState.skills);
+        if (nextState.potentials.length > 0) setPotentials(nextState.potentials);
+        toast.success("Build loaded from link!");
+      } catch (e) {
+        // ignore invalid
       }
-      return;
-    }
-
-    if (roomCode) {
-      void loadBuildByCode(roomCode);
     }
   }, []);
 
-  const handleShareBuild = async () => {
-    const roomCode = createRoomCode();
-    const compactPayload = compactBuildState({
-      buildName,
-      race,
-      weapon,
-      sins,
-      relics,
-      skillTree,
-      skills,
-      potentials,
-    });
-
-    setCurrentBuildCode(roomCode);
-    setCachedBuildData(roomCode, compactPayload);
-
-    const encodedPayload = encodeBuildDataForShare(compactPayload);
-    const shareUrl = `${window.location.origin}${window.location.pathname}?b=${roomCode}&${SHARE_PAYLOAD_PARAM}=${encodedPayload}`;
-    let finalShareUrl = shareUrl;
-
-    try {
-      const shortenerResponse = await fetch(`https://tinyurl.com/api-create.php?url=${encodeURIComponent(shareUrl)}`);
-      if (shortenerResponse.ok) {
-        const shortUrl = (await shortenerResponse.text()).trim();
-        if (shortUrl.startsWith('https://tinyurl.com/')) {
-          finalShareUrl = shortUrl;
-        }
-      }
-    } catch (error) {
-      // Use the full share URL if shortening fails.
-    }
-
-    setShareLink(finalShareUrl);
-
-    const copied = await copyToClipboard(finalShareUrl);
-    if (copied) {
-      toast.success("Short share link copied to clipboard!");
+  const handleSaveBuild = async () => {
+    if (!buildName) {
+      toast.error("Please enter a build name");
       return;
     }
 
-    toast.error("Could not create share code");
+    try {
+      const buildData = {
+        build_name: buildName,
+        race: race,
+        weapon: weapon,
+        sins: sins,
+        relics: relics,
+        skill_tree: skillTree,
+        potentials: [...skills, ...potentials]
+      };
+
+      await base44.entities.Build.create(buildData);
+      toast.success("Build saved successfully!");
+    } catch (error) {
+      toast.error("Failed to save build");
+    }
   };
+
+    const handleShareBuild = () => {
+    const ultraCompactPayload = {
+      n: typeof buildName === 'string' ? buildName.trim() : "",
+      a: typeof race === 'string' ? race : (race?.id || ""),
+      w: typeof weapon === 'string' ? weapon : (weapon?.id || ""),
+      s: Object.entries(sins || {})
+          .filter(([_, val]) => val === true || val?.active)
+          .map(([key]) => key),
+      r: Array.isArray(relics) 
+          ? relics.map(item => typeof item === 'string' ? item : (item?.id || "")).filter(Boolean) 
+          : [],
+      t: Object.entries(skillTree || {})
+          .filter(([_, active]) => Boolean(active))
+          .map(([nodeId]) => nodeId),
+      k: Array.isArray(skills) 
+          ? skills.map(item => typeof item === 'string' ? item : (item?.id || item?.name || "")).filter(Boolean) 
+          : [],
+      p: Array.isArray(potentials) 
+          ? potentials.map(item => typeof item === 'string' ? item : (item?.id || item?.name || "")).filter(Boolean) 
+          : []
+    };
+
+    const compressed = compressToEncodedURIComponent(JSON.stringify(ultraCompactPayload));
+    const url = `${window.location.origin}/join?build=${compressed}`;
+    
+    navigator.clipboard.writeText(url)
+      .then(() => {
+        toast.success("Share link copied to clipboard!");
+      })
+      .catch(() => {
+        toast.error("Could not copy – try again");
+      });
+  };
+
+
+
+
 
   return (
     <div className="relative min-h-screen bg-black text-white">
@@ -340,7 +215,10 @@ export default function Builder() {
           <div className="relative px-10 py-1">
             <div className="absolute top-0 left-0 right-0 h-px" style={{ background: 'linear-gradient(90deg, transparent, #c8c8d0, #fff, #c8c8d0, transparent)' }} />
             <div className="absolute bottom-0 left-0 right-0 h-px" style={{ background: 'linear-gradient(90deg, transparent, #c8c8d0, #fff, #c8c8d0, transparent)' }} />
-            <h1 className="abs-title" style={{ fontSize: 'clamp(1.8rem, 5vw, 3.2rem)' }}>
+            <h1
+              className="abs-title"
+              style={{ fontSize: 'clamp(1.8rem, 5vw, 3.2rem)' }}
+            >
               ABSOLVEMENT
             </h1>
           </div>
@@ -368,25 +246,16 @@ export default function Builder() {
                 className="bg-black/50 border-gray-700 text-white placeholder:text-gray-500"
               />
             </div>
-
-            <div className="flex flex-col md:flex-row gap-2 items-stretch md:items-center w-full md:w-auto">
-              <Input
-                placeholder="Build code"
-                value={codeInput}
-                onChange={(e) => setCodeInput(e.target.value.replace(/[^a-zA-Z0-9]/g, '').slice(0, 8))}
-                maxLength={8}
-                autoComplete="off"
-                spellCheck={false}
-                className="bg-black/50 border-gray-700 text-white placeholder:text-gray-500 md:w-36"
-              />
+            <div className="flex gap-2">
               <Button
-                onClick={() => void loadBuildByCode(document.querySelector('input[placeholder="Build code"]')?.value ?? codeInput)}
+                onClick={handleSaveBuild}
                 className="bg-white hover:bg-gray-200 text-black"
               >
-                Load Code
+                <Save className="w-4 h-4 mr-2" />
+                Save Build
               </Button>
               <Button
-                onClick={() => void handleShareBuild()}
+                onClick={handleShareBuild}
                 variant="outline"
                 className="border-gray-700 text-white hover:bg-zinc-800"
               >
@@ -395,12 +264,6 @@ export default function Builder() {
               </Button>
             </div>
           </div>
-          {shareLink ? (
-            <div className="mt-4 rounded-none border border-white/10 bg-black/30 px-4 py-3 text-left">
-              <div className="text-[0.65rem] uppercase tracking-[0.28em] text-gray-500">Share Link</div>
-              <div className="mt-2 break-all text-sm text-white/90">{shareLink}</div>
-            </div>
-          ) : null}
         </Card>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -451,7 +314,6 @@ export default function Builder() {
           <div className="lg:col-span-1">
             <BuildSummary
               buildName={buildName}
-              currentBuildCode={currentBuildCode}
               race={race}
               weapon={weapon}
               sins={sins}
