@@ -182,7 +182,7 @@ export default function SinsAllocator({ sins, onChange }) {
               <div className="flex items-start gap-3">
                 {/* Sin icon */}
                 {sin.icon && (
-                  <img src={sin.icon} alt={sin.name} className="w-10 h-10 object-cover rounded flex-shrink-0" />
+                  <img src={sin.icon} alt={sin.name} loading="lazy" decoding="async" className="w-10 h-10 object-cover rounded flex-shrink-0" />
                 )}
                 {/* Custom checkbox */}
                 <div className={`mt-1 w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${

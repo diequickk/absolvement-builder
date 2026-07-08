@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
 import { Card } from "../components/ui/card";
 import { Button } from "../components/ui/button";
@@ -7,17 +7,19 @@ import { Link } from "lucide-react";
 import { toast } from "../lib/toast";
 import { compressToEncodedURIComponent, decompressFromEncodedURIComponent } from 'lz-string';
 import OilBackground from "../components/OilBackground";
-import RaceSelector from "../components/builder/RaceSelector";
-import WeaponSelector from "../components/builder/WeaponSelector";
-import SinsAllocator from "../components/builder/SinsAllocator";
-import RelicsSelector from "../components/builder/RelicsSelector";
-import SkillTree from "../components/builder/SkillTree.jsx";
-import Skills from "../components/builder/Skills";
-import PotentialsPanel from "../components/builder/PotentialsPanel";
-import BuildSummary from "../components/builder/BuildSummary";
+
+const RaceSelector = lazy(() => import("../components/builder/RaceSelector"));
+const WeaponSelector = lazy(() => import("../components/builder/WeaponSelector"));
+const SinsAllocator = lazy(() => import("../components/builder/SinsAllocator"));
+const RelicsSelector = lazy(() => import("../components/builder/RelicsSelector"));
+const SkillTree = lazy(() => import("../components/builder/SkillTree.jsx"));
+const Skills = lazy(() => import("../components/builder/Skills"));
+const PotentialsPanel = lazy(() => import("../components/builder/PotentialsPanel"));
+const BuildSummary = lazy(() => import("../components/builder/BuildSummary"));
 
 const BUILD_CACHE_PREFIX = 'absolvement-build:';
 const SHARE_PAYLOAD_PARAM = 'd';
+const SITE_VERSION = '0.1';
 
 function getIdValue(value) {
   if (!value) return null;
@@ -193,6 +195,8 @@ async function copyToClipboard(text) {
 }
 
 export default function Builder() {
+  const [activeTab, setActiveTab] = useState('race');
+  const [mountedTabs, setMountedTabs] = useState(() => new Set(['race']));
   const [buildName, setBuildName] = useState("");
   const [race, setRace] = useState(null);
   const [weapon, setWeapon] = useState(null);
@@ -204,6 +208,22 @@ export default function Builder() {
   const [currentBuildCode, setCurrentBuildCode] = useState("");
   const [codeInput, setCodeInput] = useState("");
   const [shareLink, setShareLink] = useState("");
+
+  const handleTabChange = useCallback((nextTab) => {
+    setActiveTab(nextTab);
+    setMountedTabs((prev) => {
+      if (prev.has(nextTab)) return prev;
+      const next = new Set(prev);
+      next.add(nextTab);
+      return next;
+    });
+  }, []);
+
+  const tabFallback = useMemo(() => (
+    <div className="rounded border border-gray-700 bg-black/40 p-6 text-center text-sm text-gray-400">
+      Loading section...
+    </div>
+  ), []);
 
   const applyBuildData = (buildData, code = "") => {
     const nextState = expandBuildState(buildData);
@@ -382,6 +402,9 @@ export default function Builder() {
           <p className="text-gray-500 text-xs tracking-widest uppercase" style={{ fontFamily: 'Cinzel, serif', letterSpacing: '0.25em' }}>
             Build Planner
           </p>
+          <p className="mt-2 text-[0.62rem] tracking-[0.22em] uppercase text-gray-600" style={{ fontFamily: 'Cinzel, serif' }}>
+            Version {SITE_VERSION}
+          </p>
         </div>
 
         {/* Build Name & Actions */}
@@ -432,7 +455,7 @@ export default function Builder() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Builder Area */}
           <div className="lg:col-span-2">
-            <Tabs defaultValue="race" className="w-full">
+            <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
               <TabsList className="flex flex-wrap gap-4 bg-zinc-900/60 border border-gray-700 px-3 py-3 mb-6">
                 <TabsTrigger value="race" className="rounded-none border border-transparent bg-transparent px-4 py-2 text-sm font-semibold uppercase tracking-[0.18em] text-slate-300 transition-all hover:border-white/15 hover:text-white data-[state=active]:border-white/20 data-[state=active]:bg-zinc-800 data-[state=active]:text-white">Race</TabsTrigger>
                 <TabsTrigger value="weapon" className="rounded-none border border-transparent bg-transparent px-4 py-2 text-sm font-semibold uppercase tracking-[0.18em] text-slate-300 transition-all hover:border-white/15 hover:text-white data-[state=active]:border-white/20 data-[state=active]:bg-zinc-800 data-[state=active]:text-white">Weapon</TabsTrigger>
@@ -444,48 +467,78 @@ export default function Builder() {
               </TabsList>
 
               <TabsContent value="race">
-                <RaceSelector selected={race} onSelect={setRace} />
+                {mountedTabs.has('race') ? (
+                  <Suspense fallback={tabFallback}>
+                    <RaceSelector selected={race} onSelect={setRace} />
+                  </Suspense>
+                ) : null}
               </TabsContent>
 
               <TabsContent value="weapon">
-                <WeaponSelector selected={weapon} onSelect={setWeapon} />
+                {mountedTabs.has('weapon') ? (
+                  <Suspense fallback={tabFallback}>
+                    <WeaponSelector selected={weapon} onSelect={setWeapon} />
+                  </Suspense>
+                ) : null}
               </TabsContent>
 
               <TabsContent value="sins">
-                <SinsAllocator sins={sins} onChange={setSins} />
+                {mountedTabs.has('sins') ? (
+                  <Suspense fallback={tabFallback}>
+                    <SinsAllocator sins={sins} onChange={setSins} />
+                  </Suspense>
+                ) : null}
               </TabsContent>
 
               <TabsContent value="relics">
-                <RelicsSelector selected={relics} onSelect={setRelics} />
+                {mountedTabs.has('relics') ? (
+                  <Suspense fallback={tabFallback}>
+                    <RelicsSelector selected={relics} onSelect={setRelics} />
+                  </Suspense>
+                ) : null}
               </TabsContent>
 
               <TabsContent value="skills">
-                <SkillTree selected={skillTree} onChange={setSkillTree} />
+                {mountedTabs.has('skills') ? (
+                  <Suspense fallback={tabFallback}>
+                    <SkillTree selected={skillTree} onChange={setSkillTree} />
+                  </Suspense>
+                ) : null}
               </TabsContent>
 
               <TabsContent value="myskills">
-                <Skills selected={skills} onChange={setSkills} race={race} />
+                {mountedTabs.has('myskills') ? (
+                  <Suspense fallback={tabFallback}>
+                    <Skills selected={skills} onChange={setSkills} race={race} />
+                  </Suspense>
+                ) : null}
               </TabsContent>
 
               <TabsContent value="potentials">
-                <PotentialsPanel selected={potentials} onSelect={setPotentials} />
+                {mountedTabs.has('potentials') ? (
+                  <Suspense fallback={tabFallback}>
+                    <PotentialsPanel selected={potentials} onSelect={setPotentials} />
+                  </Suspense>
+                ) : null}
               </TabsContent>
             </Tabs>
           </div>
 
           {/* Build Summary Sidebar */}
           <div className="lg:col-span-1">
-            <BuildSummary
-              buildName={buildName}
-              currentBuildCode={currentBuildCode}
-              race={race}
-              weapon={weapon}
-              sins={sins}
-              relics={relics}
-              skillTree={skillTree}
-              skills={skills}
-              potentials={potentials}
-            />
+            <Suspense fallback={tabFallback}>
+              <BuildSummary
+                buildName={buildName}
+                currentBuildCode={currentBuildCode}
+                race={race}
+                weapon={weapon}
+                sins={sins}
+                relics={relics}
+                skillTree={skillTree}
+                skills={skills}
+                potentials={potentials}
+              />
+            </Suspense>
           </div>
         </div>
       </div>

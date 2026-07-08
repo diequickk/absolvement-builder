@@ -121,6 +121,8 @@ export default function RaceSelector({ selected, onSelect }) {
                     src={race.icon} 
                     alt={race.name} 
                     className="w-full h-full object-cover" 
+                    loading="lazy"
+                    decoding="async"
                     style={{ filter: 'brightness(0.9) contrast(1.05)' }}
                   />
                 </div>
@@ -141,7 +143,7 @@ export default function RaceSelector({ selected, onSelect }) {
                     </div>
                     {race.debuffs && race.debuffs.length > 0 && (
                       <div className="space-y-1">
-                        <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-red-600/95">
+                        <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-red-800/95">
                           Debuffs
                         </div>
                         <div className="flex flex-wrap gap-1">
@@ -149,7 +151,7 @@ export default function RaceSelector({ selected, onSelect }) {
                             <Badge
                               key={`debuff-${idx}`}
                               variant="secondary"
-                              className="border border-red-900/85 bg-red-950 text-red-300 text-xs shadow-[inset_0_0_0_1px_rgba(127,29,29,0.45)]"
+                              className="border border-red-950/90 bg-[#1b0507] text-red-400 text-xs shadow-[inset_0_0_0_1px_rgba(69,10,10,0.65)]"
                             >
                               {debuff}
                             </Badge>

@@ -115,6 +115,8 @@ export default function WeaponSelector({ selected, onSelect, active }) {
                       <img
                         src={resolveWeaponImagePath(weapon.image)}
                         alt={weapon.name}
+                        loading="lazy"
+                        decoding="async"
                         className="w-full h-32 object-cover rounded-md border border-gray-700/40"
                         onError={(e) => {
                           e.currentTarget.style.display = 'none';
