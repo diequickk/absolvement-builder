@@ -142,8 +142,10 @@ function decodeBuildDataFromShare(encodedPayload) {
 function extractSharedBuildData(shareText) {
   if (!shareText || typeof shareText !== 'string') return null;
 
+  const trimmedShareText = shareText.trim();
+
   try {
-    const shareUrl = new URL(shareText);
+    const shareUrl = new URL(trimmedShareText);
     const encodedPayload = shareUrl.searchParams.get(SHARE_PAYLOAD_PARAM);
     const buildData = decodeBuildDataFromShare(encodedPayload);
     if (buildData) {
@@ -153,7 +155,12 @@ function extractSharedBuildData(shareText) {
     // Fall through and try a loose parameter parse.
   }
 
-  const encodedMatch = shareText.match(new RegExp(`[?&]${SHARE_PAYLOAD_PARAM}=([^&\s]+)`));
+  const directPayloadData = decodeBuildDataFromShare(trimmedShareText);
+  if (directPayloadData) {
+    return directPayloadData;
+  }
+
+  const encodedMatch = trimmedShareText.match(new RegExp(`[?&]${SHARE_PAYLOAD_PARAM}=([^&\s]+)`));
   if (!encodedMatch?.[1]) return null;
 
   return decodeBuildDataFromShare(decodeURIComponent(encodedMatch[1]));
@@ -215,8 +222,28 @@ export default function Builder() {
     }
   };
 
-  const loadBuildByCode = async (roomCode) => {
-    const normalizedCode = typeof roomCode === 'string' ? roomCode.trim() : '';
+  const loadBuildByCode = async (inputValue) => {
+    const normalizedInput = typeof inputValue === 'string' ? inputValue.trim() : '';
+
+    const directSharedBuildData = extractSharedBuildData(normalizedInput);
+    if (directSharedBuildData) {
+      let sharedCode = '';
+      try {
+        sharedCode = new URL(normalizedInput).searchParams.get('b') || '';
+      } catch (error) {
+        sharedCode = '';
+      }
+
+      if (sharedCode) {
+        setCachedBuildData(sharedCode, directSharedBuildData);
+      }
+
+      applyBuildData(directSharedBuildData, sharedCode);
+      toast.success("Build loaded from share link!");
+      return;
+    }
+
+    const normalizedCode = normalizedInput.replace(/[^a-zA-Z0-9]/g, '').slice(0, 8);
 
     if (normalizedCode) {
       const cachedBuild = getCachedBuildData(normalizedCode);
@@ -249,12 +276,12 @@ export default function Builder() {
       return;
     }
 
-    if (!normalizedCode) {
-      toast.error("Please enter a build code");
+    if (!normalizedInput) {
+      toast.error("Please enter a build code or share link");
       return;
     }
 
-    toast.error("Could not load that build code");
+    toast.error("Could not load that code or link");
   };
 
   useEffect(() => {
@@ -371,16 +398,15 @@ export default function Builder() {
 
             <div className="flex flex-col md:flex-row gap-2 items-stretch md:items-center w-full md:w-auto">
               <Input
-                placeholder="Build code"
+                placeholder="Build code or share link"
                 value={codeInput}
-                onChange={(e) => setCodeInput(e.target.value.replace(/[^a-zA-Z0-9]/g, '').slice(0, 8))}
-                maxLength={8}
+                onChange={(e) => setCodeInput(e.target.value)}
                 autoComplete="off"
                 spellCheck={false}
                 className="bg-black/50 border-gray-700 text-white placeholder:text-gray-500 md:w-36"
               />
               <Button
-                onClick={() => void loadBuildByCode(document.querySelector('input[placeholder="Build code"]')?.value ?? codeInput)}
+                onClick={() => void loadBuildByCode(codeInput)}
                 className="bg-white hover:bg-gray-200 text-black"
               >
                 Load Code

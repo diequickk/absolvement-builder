@@ -1,9 +1,8 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback, useDeferredValue, useRef, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Lock, X, Search, ChevronDown, ChevronUp, Plus, Check } from "lucide-react";
+import { Lock, X, Search, ChevronDown, ChevronUp, Check } from "lucide-react";
 import { SKILLS, SKILL_ELEMENTS, SKILL_PATHS } from "./skillsData";
 
 const RACE_SKILLS = {
@@ -237,16 +236,19 @@ function getRarityBadgeStyle(rarity) {
   };
 }
 
-function SkillCard({ skill, isSelected, onToggle }) {
+const SkillCard = React.memo(function SkillCard({ skill, isSelected, onToggle }) {
   const [expanded, setExpanded] = useState(false);
-  const rarity = getSkillRarity(skill);
-  const cardStyle = getSkillCardBorderStyle(skill, isSelected);
+  const rarity = useMemo(() => getSkillRarity(skill), [skill]);
+  const cardStyle = useMemo(() => getSkillCardBorderStyle(skill, isSelected), [skill, isSelected]);
+  const elementBadgeStyle = useMemo(() => getElementBadgeStyle(skill.element), [skill.element]);
+  const rarityBadgeStyle = useMemo(() => getRarityBadgeStyle(rarity), [rarity]);
+  const handleCardClick = useCallback(() => onToggle(skill), [onToggle, skill]);
 
   return (
     <div className="rounded border transition-all hover:brightness-110" style={cardStyle}>
       <div
         className="flex items-start gap-3 p-3 cursor-pointer"
-        onClick={() => onToggle(skill)}
+        onClick={handleCardClick}
       >
         <div className={`mt-0.5 w-5 h-5 rounded-sm border flex-shrink-0 flex items-center justify-center transition-all ${
           isSelected ? 'bg-white/20 border-white/50' : 'border-gray-600'
@@ -263,11 +265,11 @@ function SkillCard({ skill, isSelected, onToggle }) {
           <div className="flex flex-wrap gap-1 mb-1.5">
             <Badge
               className="text-[10px] px-1.5 py-0 border"
-              style={getElementBadgeStyle(skill.element)}
+              style={elementBadgeStyle}
             >
               {skill.element}
             </Badge>
-            <Badge className="text-[10px] px-1.5 py-0 border" style={getRarityBadgeStyle(rarity)}>
+            <Badge className="text-[10px] px-1.5 py-0 border" style={rarityBadgeStyle}>
               {rarity}
             </Badge>
           </div>
@@ -305,7 +307,9 @@ function SkillCard({ skill, isSelected, onToggle }) {
       )}
     </div>
   );
-}
+}, (prevProps, nextProps) => {
+  return prevProps.skill === nextProps.skill && prevProps.isSelected === nextProps.isSelected;
+});
 
 export default function Skills({ selected, onChange, race }) {
   const raceSkill = race ? RACE_SKILLS[race] : null;
@@ -314,23 +318,31 @@ export default function Skills({ selected, onChange, race }) {
   const freeSlots = MAX_SKILLS - raceSlotCount;
 
   const [search, setSearch] = useState('');
+  const deferredSearch = useDeferredValue(search);
   const [elementFilter, setElementFilter] = useState('All');
 
   // selected is an array of skill IDs
   const selectedIds = useMemo(() => new Set(selected || []), [selected]);
+  const selectedRef = useRef(selected || []);
 
-  const handleToggle = (skill) => {
-    const current = selected || [];
-    if (selectedIds.has(skill.id)) {
+  useEffect(() => {
+    selectedRef.current = selected || [];
+  }, [selected]);
+
+  const handleToggle = useCallback((skill) => {
+    const current = selectedRef.current;
+    const isAlreadySelected = current.includes(skill.id);
+
+    if (isAlreadySelected) {
       onChange(current.filter(id => id !== skill.id));
     } else {
       if (current.length >= freeSlots) return;
       onChange([...current, skill.id]);
     }
-  };
+  }, [onChange, freeSlots]);
 
   const filteredSkills = useMemo(() => {
-    const q = search.toLowerCase().trim();
+    const q = deferredSearch.toLowerCase().trim();
     return SKILLS.filter(s => {
       const matchesElement = elementFilter === 'All' || s.element === elementFilter;
       const matchesSearch = !q ||
@@ -340,7 +352,7 @@ export default function Skills({ selected, onChange, race }) {
         s.upgrades.some(u => u.name.toLowerCase().includes(q));
       return matchesElement && matchesSearch;
     });
-  }, [search, elementFilter]);
+  }, [deferredSearch, elementFilter]);
 
   // Group by element then rarity
   const grouped = useMemo(() => {
@@ -361,7 +373,7 @@ export default function Skills({ selected, onChange, race }) {
     return map;
   }, [filteredSkills]);
 
-  const selectedSkills = SKILLS.filter(s => selectedIds.has(s.id));
+  const selectedSkills = useMemo(() => SKILLS.filter(s => selectedIds.has(s.id)), [selectedIds]);
   const totalUsed = selectedSkills.length + raceSlotCount;
 
   return (

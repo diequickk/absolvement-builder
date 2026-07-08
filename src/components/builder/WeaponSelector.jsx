@@ -16,21 +16,21 @@ const WEAPONS = [
   { id: "worshipper_spear", name: "Worshipper's Spear", image: "/images/Screenshot_2025-05-09_114954 (1).png", type: "Heavy", damage: 11.92, description: "Throw tethered spear causing deep bleed" },
   { id: "bloodletter_katana", name: "Bloodletter's Katana", image: "/images/image (8).png", type: "Medium", damage: 12.65, description: "Teleport behind targets for a devastating slash" },
   { id: "stormweaver", name: "Stormweaver", image: "/images/image (9).png", type: "Magic", damage: 13.56, description: "Bombard area with supersonic lightning beams" },
-  { id: "drowned_scythe", name: "Drowned Scythe", image: "public/images/image (10).png", type: "Heavy", damage: 13.9, description: "Form protective bubble with invincibility frames" },
-  { id: "gravetender_scythe", name: "Gravetender's Scythe", image: "public/images/image (11).png", type: "Heavy", damage: 13.9, description: "Spin and slam with shadowstrike damage" },
-  { id: "hand_justice", name: "Hand of Justice", image: "public/images/image (12).png", type: "Heavy", damage: 14.79, description: "Holy slam with irradiating area damage" },
-  { id: "justicar_greatsword", name: "Justicar's Greatsword", image: "public/images/Screenshot_2025-05-09_115117.png", type: "Heavy", damage: 15.64, description: "Sacrifice health to grant allies regeneration and armor" },
-  { id: "headtaker_greatsword", name: "Headtaker's Greatsword", image: "public/images/Screenshot_2025-05-09_115042.png", type: "Heavy", damage: 15.64, description: "Slam ground with shadow damage knockback" },
-  { id: "stonebleeder_axe", name: "Stonebleeder Greataxe", image: "public/images/image (13).png", type: "Heavy", damage: 16.54, description: "Rupture ground with earth eruptions" },
-  { id: "divine_plume", name: "Divine Plume Scythe", image: "public/images/image (14).png", type: "Heavy", damage: 14.15, description: "Cleanse debuffs and transfer them to enemies" },
-  { id: "zephyr_glaive", name: "Zephyr Fang Glaive", image: "public/images/image (10).webp", type: "Medium", damage: 13.17, description: "Vault into dropkick with wind vortex" },
-  { id: "cinderheart_maul", name: "Cinderheart Maul", image: "public/images/image (15).png", type: "Heavy", damage: 14.78, description: "Spin and erupt in magma dealing fire damage" },
-  { id: "crystallized_katana", name: "Crystallized Katana", image: "public/images/image (16).png", type: "Medium", damage: 12.65, description: "Build amethyst stages for crushing earth damage" },
-  { id: "final_rites", name: "Final Rites Greataxe", image: "public/images/image (17).png", type: "Heavy", damage: 12.24, description: "Drain enemies to steal health and increase damage" },
-  { id: "black_ice", name: "Black Ice Ravager Axe", image: "public/images/image (18).png", type: "Heavy", damage: 16.53, description: "Shift forms and empower M1s with frost damage" },
-  { id: "silkwing_bow", name: "Silkwing Bow", image: "public/images/image (19).png", type: "Magic", damage: 13.85, description: "Summon bloodbriars that stun enemies" },
-  { id: "tidebreaker", name: "Tidebreaker Cutlass", image: "public/images/image (11).webp", type: "Medium", damage: 10.62, description: "Summon growing whirlpool that pulls enemies" },
-  { id: "Shockclaw", name: "Shockclaw", image: "public/images/image (20).png", type: "Light", damage: 7.7, description: "Slam your claws into the ground to release an electric pulse, dealing 20 damage and magnetizing targets for 6 seconds" },
+  { id: "drowned_scythe", name: "Drowned Scythe", image: "/images/image (10).png", type: "Heavy", damage: 13.9, description: "Form protective bubble with invincibility frames" },
+  { id: "gravetender_scythe", name: "Gravetender's Scythe", image: "/images/image (11).png", type: "Heavy", damage: 13.9, description: "Spin and slam with shadowstrike damage" },
+  { id: "hand_justice", name: "Hand of Justice", image: "/images/image (12).png", type: "Heavy", damage: 14.79, description: "Holy slam with irradiating area damage" },
+  { id: "justicar_greatsword", name: "Justicar's Greatsword", image: "/images/Screenshot_2025-05-09_115117.png", type: "Heavy", damage: 15.64, description: "Sacrifice health to grant allies regeneration and armor" },
+  { id: "headtaker_greatsword", name: "Headtaker's Greatsword", image: "/images/Screenshot_2025-05-09_115042.png", type: "Heavy", damage: 15.64, description: "Slam ground with shadow damage knockback" },
+  { id: "stonebleeder_axe", name: "Stonebleeder Greataxe", image: "/images/image (13).png", type: "Heavy", damage: 16.54, description: "Rupture ground with earth eruptions" },
+  { id: "divine_plume", name: "Divine Plume Scythe", image: "/images/image (14).png", type: "Heavy", damage: 14.15, description: "Cleanse debuffs and transfer them to enemies" },
+  { id: "zephyr_glaive", name: "Zephyr Fang Glaive", image: "/images/image (10).webp", type: "Medium", damage: 13.17, description: "Vault into dropkick with wind vortex" },
+  { id: "cinderheart_maul", name: "Cinderheart Maul", image: "/images/image (15).png", type: "Heavy", damage: 14.78, description: "Spin and erupt in magma dealing fire damage" },
+  { id: "crystallized_katana", name: "Crystallized Katana", image: "/images/image (16).png", type: "Medium", damage: 12.65, description: "Build amethyst stages for crushing earth damage" },
+  { id: "final_rites", name: "Final Rites Greataxe", image: "/images/image (17).png", type: "Heavy", damage: 12.24, description: "Drain enemies to steal health and increase damage" },
+  { id: "black_ice", name: "Black Ice Ravager Axe", image: "/images/image (18).png", type: "Heavy", damage: 16.53, description: "Shift forms and empower M1s with frost damage" },
+  { id: "silkwing_bow", name: "Silkwing Bow", image: "/images/image (19).png", type: "Magic", damage: 13.85, description: "Summon bloodbriars that stun enemies" },
+  { id: "tidebreaker", name: "Tidebreaker Cutlass", image: "/images/image (11).webp", type: "Medium", damage: 10.62, description: "Summon growing whirlpool that pulls enemies" },
+  { id: "Shockclaw", name: "Shockclaw", image: "/images/image (20).png", type: "Light", damage: 7.7, description: "Slam your claws into the ground to release an electric pulse, dealing 20 damage and magnetizing targets for 6 seconds" },
 ];
 
 const TYPE_COLORS = {
@@ -39,6 +39,19 @@ const TYPE_COLORS = {
   Heavy: 'bg-red-900/40 text-red-300 border-red-800',
   Magic: 'bg-purple-900/40 text-purple-300 border-purple-800',
 };
+
+function resolveWeaponImagePath(path) {
+  if (!path) return '';
+
+  // Support legacy "public/images/..." and root-relative "/images/..." entries.
+  const cleanPath = path
+    .trim()
+    .replace(/^public\//, '')
+    .replace(/^\/+/, '');
+
+  const baseUrl = import.meta.env.BASE_URL || '/';
+  return `${baseUrl}${cleanPath}`;
+}
 
 export default function WeaponSelector({ selected, onSelect, active }) {
   const [search, setSearch] = useState('');
@@ -100,7 +113,7 @@ export default function WeaponSelector({ selected, onSelect, active }) {
                     <div className="h-px bg-gradient-to-r from-gray-700/20 via-gray-600/40 to-gray-700/20" />
                     <div className="p-4 pt-3">
                       <img
-                        src={weapon.image}
+                        src={resolveWeaponImagePath(weapon.image)}
                         alt={weapon.name}
                         className="w-full h-32 object-cover rounded-md border border-gray-700/40"
                         onError={(e) => {
