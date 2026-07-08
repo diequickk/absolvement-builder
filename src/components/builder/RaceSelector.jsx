@@ -143,7 +143,10 @@ export default function RaceSelector({ selected, onSelect }) {
                     </div>
                     {race.debuffs && race.debuffs.length > 0 && (
                       <div className="space-y-1">
-                        <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-red-800/95">
+                        <div
+                          className="text-[11px] font-semibold uppercase tracking-[0.2em]"
+                          style={{ color: '#991b1b' }}
+                        >
                           Debuffs
                         </div>
                         <div className="flex flex-wrap gap-1">
@@ -151,7 +154,13 @@ export default function RaceSelector({ selected, onSelect }) {
                             <Badge
                               key={`debuff-${idx}`}
                               variant="secondary"
-                              className="border border-red-950/90 bg-[#1b0507] text-red-400 text-xs shadow-[inset_0_0_0_1px_rgba(69,10,10,0.65)]"
+                              className="text-xs"
+                              style={{
+                                border: '1px solid rgba(69, 10, 10, 0.9)',
+                                background: '#1b0507',
+                                color: '#f87171',
+                                boxShadow: 'inset 0 0 0 1px rgba(69,10,10,0.65)',
+                              }}
                             >
                               {debuff}
                             </Badge>

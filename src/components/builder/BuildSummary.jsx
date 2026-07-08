@@ -75,7 +75,19 @@ const NODE_MAP = buildNodeMap();
 const SKILL_MAP = {};
 for (const s of SKILLS) SKILL_MAP[s.id] = s;
 
-export default function BuildSummary({ buildName, currentBuildCode, race, weapon, sins, relics, skillTree, skills, potentials }) {
+export default function BuildSummary({
+  buildName,
+  currentBuildCode,
+  race,
+  weapon,
+  sins,
+  relics,
+  skillTree,
+  skills,
+  potentials,
+  buildExplanation,
+  onBuildExplanationChange,
+}) {
   const activeSins = Object.keys(sins || {}).filter(k => sins[k]?.active);
   const totalSinPoints = activeSins.length;
   const fragmentBonus = totalSinPoints * 12;
@@ -121,6 +133,25 @@ export default function BuildSummary({ buildName, currentBuildCode, race, weapon
             </div>
           </div>
         )}
+
+        <div className="mt-3">
+          <label
+            htmlFor="build-explanation"
+            className="block"
+            style={{ color: '#888898', fontSize: '0.62rem', letterSpacing: '0.16em', textTransform: 'uppercase', fontFamily: 'Cinzel, serif' }}
+          >
+            Build Explanation
+          </label>
+          <textarea
+            id="build-explanation"
+            value={buildExplanation || ''}
+            onChange={(event) => onBuildExplanationChange?.(event.target.value)}
+            placeholder="Write your build guide, combo flow, rotation, and matchup notes..."
+            className="mt-2 w-full resize-y rounded border border-white/10 bg-black/40 px-3 py-2 text-xs text-white/90 outline-none focus:border-white/30"
+            rows={5}
+            maxLength={4000}
+          />
+        </div>
       </div>
 
       <div className="px-5 py-4 space-y-3.5">

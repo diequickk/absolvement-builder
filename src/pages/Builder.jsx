@@ -14,11 +14,16 @@ const SinsAllocator = lazy(() => import("../components/builder/SinsAllocator"));
 const RelicsSelector = lazy(() => import("../components/builder/RelicsSelector"));
 const SkillTree = lazy(() => import("../components/builder/SkillTree.jsx"));
 const Skills = lazy(() => import("../components/builder/Skills"));
-const PotentialsPanel = lazy(() => import("../components/builder/PotentialsPanel"));
 const BuildSummary = lazy(() => import("../components/builder/BuildSummary"));
 
 const BUILD_CACHE_PREFIX = 'absolvement-build:';
+const SHARE_CODE_PARAM = 'b';
 const SHARE_PAYLOAD_PARAM = 'd';
+const SHARE_SLUG_PARAM = 'slug';
+const BRANDED_SLUG_PREFIX = 'abs-builder';
+const BUILD_CODE_VERSION = 'v0.2';
+const LEGACY_CODE_VERSION = 'v0.1';
+const MAX_SHARE_URL_LENGTH = 2048;
 const SITE_VERSION = '0.1';
 
 function getIdValue(value) {
@@ -29,7 +34,7 @@ function getIdValue(value) {
 }
 
 function compactBuildState(buildState) {
-  const compactState = {};
+  const compactState = { v: '0.2' };
 
   if (buildState.buildName?.trim()) compactState.n = buildState.buildName.trim();
   const raceId = getIdValue(buildState.race);
@@ -58,6 +63,10 @@ function compactBuildState(buildState) {
 
   if (Array.isArray(buildState.potentials) && buildState.potentials.length > 0) {
     compactState.p = [...new Set(buildState.potentials.map(getIdValue).filter(Boolean))];
+  }
+
+  if (typeof buildState.buildExplanation === 'string' && buildState.buildExplanation.trim().length > 0) {
+    compactState.x = buildState.buildExplanation;
   }
 
   return compactState;
@@ -99,6 +108,7 @@ function expandBuildState(buildData) {
     skillTree: Object.keys(treeObject).length ? treeObject : (buildData.skill_tree ?? {}),
     skills: buildData.k ?? buildData.skills ?? [],
     potentials: buildData.p ?? buildData.potentials ?? [],
+    buildExplanation: buildData.x ?? buildData.build_explanation ?? "",
   };
 }
 
@@ -107,6 +117,41 @@ function createRoomCode(length = 8) {
   const values = new Uint32Array(length);
   window.crypto.getRandomValues(values);
   return Array.from(values, (value) => alphabet[value % alphabet.length]).join('');
+}
+
+function normalizeRoomCode(value) {
+  return (typeof value === 'string' ? value : '')
+    .replace(/[^a-zA-Z0-9]/g, '')
+    .slice(0, 32);
+}
+
+function formatBuildCode(roomCode, version = BUILD_CODE_VERSION) {
+  return roomCode ? `${version}-${roomCode}` : '';
+}
+
+function parseBuildCode(rawCode) {
+  const value = (typeof rawCode === 'string' ? rawCode : '').trim();
+  if (!value) {
+    return { version: LEGACY_CODE_VERSION, roomCode: '', normalizedCode: '' };
+  }
+
+  const versionedMatch = value.match(/^v(\d+\.\d+)-([A-Za-z0-9]+)$/i);
+  if (versionedMatch) {
+    const version = `v${versionedMatch[1]}`;
+    const roomCode = normalizeRoomCode(versionedMatch[2]);
+    return {
+      version,
+      roomCode,
+      normalizedCode: roomCode ? `${version}-${roomCode}` : '',
+    };
+  }
+
+  const roomCode = normalizeRoomCode(value);
+  return {
+    version: LEGACY_CODE_VERSION,
+    roomCode,
+    normalizedCode: roomCode,
+  };
 }
 
 function getCachedBuildData(roomCode) {
@@ -126,6 +171,28 @@ function setCachedBuildData(roomCode, buildData) {
   }
 }
 
+function normalizeIncomingBuildData(decodedBuildData) {
+  if (!decodedBuildData || typeof decodedBuildData !== 'object') return null;
+
+  const normalized = { ...decodedBuildData };
+  if (normalized.xc && !normalized.x && typeof normalized.xc === 'string') {
+    try {
+      const explanation = decompressFromEncodedURIComponent(normalized.xc);
+      if (typeof explanation === 'string') {
+        normalized.x = explanation;
+      }
+    } catch (error) {
+      // Ignore invalid compressed explanation fallback.
+    }
+  }
+
+  if (!normalized.v || normalized.v === '0.1') {
+    normalized.v = '0.2';
+  }
+
+  return normalized;
+}
+
 function encodeBuildDataForShare(buildData) {
   return compressToEncodedURIComponent(JSON.stringify(buildData));
 }
@@ -135,10 +202,17 @@ function decodeBuildDataFromShare(encodedPayload) {
 
   try {
     const decodedJson = decompressFromEncodedURIComponent(encodedPayload);
-    return decodedJson ? JSON.parse(decodedJson) : null;
+    const parsed = decodedJson ? JSON.parse(decodedJson) : null;
+    return normalizeIncomingBuildData(parsed);
   } catch (error) {
     return null;
   }
+}
+
+function buildBrandedShareUrl(buildCode, encodedPayload) {
+  const brandedSlug = `${BRANDED_SLUG_PREFIX}-${buildCode}`;
+  const query = `${SHARE_SLUG_PARAM}=${encodeURIComponent(brandedSlug)}&${SHARE_CODE_PARAM}=${encodeURIComponent(buildCode)}&${SHARE_PAYLOAD_PARAM}=${encodedPayload}`;
+  return `${window.location.origin}${window.location.pathname}?${query}`;
 }
 
 function extractSharedBuildData(shareText) {
@@ -151,7 +225,12 @@ function extractSharedBuildData(shareText) {
     const encodedPayload = shareUrl.searchParams.get(SHARE_PAYLOAD_PARAM);
     const buildData = decodeBuildDataFromShare(encodedPayload);
     if (buildData) {
-      return buildData;
+      const parsedCode = parseBuildCode(shareUrl.searchParams.get(SHARE_CODE_PARAM) || '');
+      return {
+        buildData,
+        sharedCode: parsedCode.normalizedCode,
+        roomCode: parsedCode.roomCode,
+      };
     }
   } catch (error) {
     // Fall through and try a loose parameter parse.
@@ -159,13 +238,26 @@ function extractSharedBuildData(shareText) {
 
   const directPayloadData = decodeBuildDataFromShare(trimmedShareText);
   if (directPayloadData) {
-    return directPayloadData;
+    return {
+      buildData: directPayloadData,
+      sharedCode: '',
+      roomCode: '',
+    };
   }
 
   const encodedMatch = trimmedShareText.match(new RegExp(`[?&]${SHARE_PAYLOAD_PARAM}=([^&\s]+)`));
   if (!encodedMatch?.[1]) return null;
 
-  return decodeBuildDataFromShare(decodeURIComponent(encodedMatch[1]));
+  const buildData = decodeBuildDataFromShare(decodeURIComponent(encodedMatch[1]));
+  if (!buildData) return null;
+
+  const codeMatch = trimmedShareText.match(new RegExp(`[?&]${SHARE_CODE_PARAM}=([^&\s]+)`));
+  const parsedCode = parseBuildCode(codeMatch?.[1] ? decodeURIComponent(codeMatch[1]) : '');
+  return {
+    buildData,
+    sharedCode: parsedCode.normalizedCode,
+    roomCode: parsedCode.roomCode,
+  };
 }
 
 async function readClipboardText() {
@@ -205,6 +297,7 @@ export default function Builder() {
   const [skillTree, setSkillTree] = useState({});
   const [skills, setSkills] = useState([]);
   const [potentials, setPotentials] = useState([]);
+  const [buildExplanation, setBuildExplanation] = useState("");
   const [currentBuildCode, setCurrentBuildCode] = useState("");
   const [codeInput, setCodeInput] = useState("");
   const [shareLink, setShareLink] = useState("");
@@ -236,9 +329,11 @@ export default function Builder() {
     setSkillTree(nextState.skillTree || {});
     setSkills(nextState.skills || []);
     setPotentials(nextState.potentials || []);
+    setBuildExplanation(nextState.buildExplanation || "");
 
     if (code) {
       setCurrentBuildCode(code);
+      setCodeInput(code);
     }
   };
 
@@ -247,28 +342,22 @@ export default function Builder() {
 
     const directSharedBuildData = extractSharedBuildData(normalizedInput);
     if (directSharedBuildData) {
-      let sharedCode = '';
-      try {
-        sharedCode = new URL(normalizedInput).searchParams.get('b') || '';
-      } catch (error) {
-        sharedCode = '';
+      if (directSharedBuildData.roomCode) {
+        setCachedBuildData(directSharedBuildData.roomCode, directSharedBuildData.buildData);
       }
 
-      if (sharedCode) {
-        setCachedBuildData(sharedCode, directSharedBuildData);
-      }
-
-      applyBuildData(directSharedBuildData, sharedCode);
+      applyBuildData(directSharedBuildData.buildData, directSharedBuildData.sharedCode);
       toast.success("Build loaded from share link!");
       return;
     }
 
-    const normalizedCode = normalizedInput.replace(/[^a-zA-Z0-9]/g, '').slice(0, 8);
+    const parsedInputCode = parseBuildCode(normalizedInput);
+    const normalizedCode = parsedInputCode.roomCode;
 
     if (normalizedCode) {
       const cachedBuild = getCachedBuildData(normalizedCode);
       if (cachedBuild) {
-        applyBuildData(cachedBuild, normalizedCode);
+        applyBuildData(cachedBuild, parsedInputCode.normalizedCode || normalizedCode);
         toast.success("Build loaded from code!");
         return;
       }
@@ -278,20 +367,13 @@ export default function Builder() {
     const sharedBuildData = extractSharedBuildData(clipboardText);
 
     if (sharedBuildData) {
-      let sharedCode = normalizedCode;
-      if (!sharedCode) {
-        try {
-          sharedCode = new URL(clipboardText).searchParams.get('b') || '';
-        } catch (error) {
-          sharedCode = '';
-        }
+      const sharedCode = sharedBuildData.sharedCode || parsedInputCode.normalizedCode;
+
+      if (sharedBuildData.roomCode || parsedInputCode.roomCode) {
+        setCachedBuildData(sharedBuildData.roomCode || parsedInputCode.roomCode, sharedBuildData.buildData);
       }
 
-      if (sharedCode) {
-        setCachedBuildData(sharedCode, sharedBuildData);
-      }
-
-      applyBuildData(sharedBuildData, sharedCode);
+      applyBuildData(sharedBuildData.buildData, sharedCode);
       toast.success("Build loaded from share link!");
       return;
     }
@@ -306,29 +388,30 @@ export default function Builder() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const roomCode = params.get('b') || '';
+    const incomingCode = params.get(SHARE_CODE_PARAM) || '';
+    const parsedIncomingCode = parseBuildCode(incomingCode);
     const encodedPayload = params.get(SHARE_PAYLOAD_PARAM);
 
     if (encodedPayload) {
       const buildData = decodeBuildDataFromShare(encodedPayload);
       if (buildData) {
-        applyBuildData(buildData, roomCode);
-        if (roomCode) {
-          setCodeInput(roomCode);
-          setCurrentBuildCode(roomCode);
-          setCachedBuildData(roomCode, buildData);
+        const uiCode = parsedIncomingCode.normalizedCode || incomingCode;
+        applyBuildData(buildData, uiCode);
+        if (parsedIncomingCode.roomCode) {
+          setCachedBuildData(parsedIncomingCode.roomCode, buildData);
         }
       }
       return;
     }
 
-    if (roomCode) {
-      void loadBuildByCode(roomCode);
+    if (incomingCode) {
+      void loadBuildByCode(incomingCode);
     }
   }, []);
 
   const handleShareBuild = async () => {
     const roomCode = createRoomCode();
+    const buildCode = formatBuildCode(roomCode);
     const compactPayload = compactBuildState({
       buildName,
       race,
@@ -338,36 +421,41 @@ export default function Builder() {
       skillTree,
       skills,
       potentials,
+      buildExplanation,
     });
 
-    setCurrentBuildCode(roomCode);
+    setCurrentBuildCode(buildCode);
+    setCodeInput(buildCode);
     setCachedBuildData(roomCode, compactPayload);
 
-    const encodedPayload = encodeBuildDataForShare(compactPayload);
-    const shareUrl = `${window.location.origin}${window.location.pathname}?b=${roomCode}&${SHARE_PAYLOAD_PARAM}=${encodedPayload}`;
-    let finalShareUrl = shareUrl;
+    let payloadForShare = { ...compactPayload };
+    let encodedPayload = encodeBuildDataForShare(payloadForShare);
+    let finalShareUrl = buildBrandedShareUrl(buildCode, encodedPayload);
 
-    try {
-      const shortenerResponse = await fetch(`https://tinyurl.com/api-create.php?url=${encodeURIComponent(shareUrl)}`);
-      if (shortenerResponse.ok) {
-        const shortUrl = (await shortenerResponse.text()).trim();
-        if (shortUrl.startsWith('https://tinyurl.com/')) {
-          finalShareUrl = shortUrl;
-        }
-      }
-    } catch (error) {
-      // Use the full share URL if shortening fails.
+    if (finalShareUrl.length > MAX_SHARE_URL_LENGTH && typeof payloadForShare.x === 'string') {
+      payloadForShare = {
+        ...payloadForShare,
+        xc: compressToEncodedURIComponent(payloadForShare.x),
+      };
+      delete payloadForShare.x;
+      encodedPayload = encodeBuildDataForShare(payloadForShare);
+      finalShareUrl = buildBrandedShareUrl(buildCode, encodedPayload);
+    }
+
+    if (finalShareUrl.length > MAX_SHARE_URL_LENGTH) {
+      toast.error('Build is too long to share in a URL. Shorten the explanation and try again.');
+      return;
     }
 
     setShareLink(finalShareUrl);
 
     const copied = await copyToClipboard(finalShareUrl);
     if (copied) {
-      toast.success("Short share link copied to clipboard!");
+      toast.success("Share link copied to clipboard!");
       return;
     }
 
-    toast.error("Could not create share code");
+    toast.error("Could not copy share link");
   };
 
   return (
@@ -463,7 +551,6 @@ export default function Builder() {
                 <TabsTrigger value="relics" className="rounded-none border border-transparent bg-transparent px-4 py-2 text-sm font-semibold uppercase tracking-[0.18em] text-slate-300 transition-all hover:border-white/15 hover:text-white data-[state=active]:border-white/20 data-[state=active]:bg-zinc-800 data-[state=active]:text-white">Relics</TabsTrigger>
                 <TabsTrigger value="skills" className="rounded-none border border-transparent bg-transparent px-4 py-2 text-sm font-semibold uppercase tracking-[0.18em] text-slate-300 transition-all hover:border-white/15 hover:text-white data-[state=active]:border-white/20 data-[state=active]:bg-zinc-800 data-[state=active]:text-white">Soul Tree</TabsTrigger>
                 <TabsTrigger value="myskills" className="rounded-none border border-transparent bg-transparent px-4 py-2 text-sm font-semibold uppercase tracking-[0.18em] text-slate-300 transition-all hover:border-white/15 hover:text-white data-[state=active]:border-white/20 data-[state=active]:bg-zinc-800 data-[state=active]:text-white">Skills</TabsTrigger>
-                <TabsTrigger value="potentials" className="rounded-none border border-transparent bg-transparent px-4 py-2 text-sm font-semibold uppercase tracking-[0.18em] text-slate-300 transition-all hover:border-white/15 hover:text-white data-[state=active]:border-white/20 data-[state=active]:bg-zinc-800 data-[state=active]:text-white">Core Potentials</TabsTrigger>
               </TabsList>
 
               <TabsContent value="race">
@@ -513,14 +600,6 @@ export default function Builder() {
                   </Suspense>
                 ) : null}
               </TabsContent>
-
-              <TabsContent value="potentials">
-                {mountedTabs.has('potentials') ? (
-                  <Suspense fallback={tabFallback}>
-                    <PotentialsPanel selected={potentials} onSelect={setPotentials} />
-                  </Suspense>
-                ) : null}
-              </TabsContent>
             </Tabs>
           </div>
 
@@ -537,6 +616,8 @@ export default function Builder() {
                 skillTree={skillTree}
                 skills={skills}
                 potentials={potentials}
+                buildExplanation={buildExplanation}
+                onBuildExplanationChange={setBuildExplanation}
               />
             </Suspense>
           </div>
