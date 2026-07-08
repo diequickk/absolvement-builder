@@ -87,6 +87,7 @@ export default function BuildSummary({
   potentials,
   buildExplanation,
   onBuildExplanationChange,
+  onCopyBuildCode,
 }) {
   const activeSins = Object.keys(sins || {}).filter(k => sins[k]?.active);
   const totalSinPoints = activeSins.length;
@@ -128,9 +129,15 @@ export default function BuildSummary({
             <div style={{ color: '#67e8f9', fontSize: '0.62rem', letterSpacing: '0.16em', textTransform: 'uppercase', fontFamily: 'Cinzel, serif' }}>
               Build Code:
             </div>
-            <div className="mt-1 select-all break-all font-mono text-sm" style={{ color: '#cffafe' }}>
+            <button
+              type="button"
+              className="mt-1 block w-full select-all break-all text-left font-mono text-sm"
+              style={{ color: '#cffafe' }}
+              onClick={() => onCopyBuildCode?.()}
+              title="Click to copy build code"
+            >
               {currentBuildCode}
-            </div>
+            </button>
           </div>
         )}
 

@@ -300,7 +300,6 @@ export default function Builder() {
   const [buildExplanation, setBuildExplanation] = useState("");
   const [currentBuildCode, setCurrentBuildCode] = useState("");
   const [codeInput, setCodeInput] = useState("");
-  const [shareLink, setShareLink] = useState("");
 
   const handleTabChange = useCallback((nextTab) => {
     setActiveTab(nextTab);
@@ -317,6 +316,18 @@ export default function Builder() {
       Loading section...
     </div>
   ), []);
+
+  const handleCopyBuildCode = useCallback(async () => {
+    if (!currentBuildCode) return;
+
+    const copied = await copyToClipboard(currentBuildCode);
+    if (copied) {
+      toast.success("Build code copied to clipboard!");
+      return;
+    }
+
+    toast.error("Could not copy build code");
+  }, [currentBuildCode]);
 
   const applyBuildData = (buildData, code = "") => {
     const nextState = expandBuildState(buildData);
@@ -447,7 +458,17 @@ export default function Builder() {
       return;
     }
 
-    setShareLink(finalShareUrl);
+    try {
+      const shortenerResponse = await fetch(`https://tinyurl.com/api-create.php?url=${encodeURIComponent(finalShareUrl)}`);
+      if (shortenerResponse.ok) {
+        const shortUrl = (await shortenerResponse.text()).trim();
+        if (shortUrl.startsWith('https://tinyurl.com/')) {
+          finalShareUrl = shortUrl;
+        }
+      }
+    } catch (error) {
+      // Keep full URL fallback if shortening fails.
+    }
 
     const copied = await copyToClipboard(finalShareUrl);
     if (copied) {
@@ -532,12 +553,6 @@ export default function Builder() {
               </Button>
             </div>
           </div>
-          {shareLink ? (
-            <div className="mt-4 rounded-none border border-white/10 bg-black/30 px-4 py-3 text-left">
-              <div className="text-[0.65rem] uppercase tracking-[0.28em] text-gray-500">Share Link</div>
-              <div className="mt-2 break-all text-sm text-white/90">{shareLink}</div>
-            </div>
-          ) : null}
         </Card>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -618,6 +633,7 @@ export default function Builder() {
                 potentials={potentials}
                 buildExplanation={buildExplanation}
                 onBuildExplanationChange={setBuildExplanation}
+                onCopyBuildCode={handleCopyBuildCode}
               />
             </Suspense>
           </div>
