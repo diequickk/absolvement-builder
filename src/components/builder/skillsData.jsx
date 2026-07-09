@@ -1256,7 +1256,7 @@ export const SKILLS = [
   },
   {
     id: "bloom", name: "Bloom", element: "Nature", tier: "Intermediate",
-    description: "Heal an ally or self over time. 4 Health/sec for 10 seconds.",
+    description: "Heal an ally or self over time. 4 Health/sec for 5 seconds.",
     upgrades: [
       { name: "Chlorophyll", rarity: "Uncommon", desc: "+10% healing." },
       { name: "Genesis", rarity: "Rare", desc: "Final pulse heals nearby allies. Locks Crown of Thorns.", locks: ["Crown of Thorns"] },
@@ -1273,7 +1273,7 @@ export const SKILLS = [
   },
   {
     id: "root_burst", name: "Root Burst", element: "Nature", tier: "Intermediate",
-    description: "Summon roots to burst from the ground. 13.75 Nature Damage. Knocks back nearby enemies.",
+    description: "Summon roots to burst from the ground. 14 Nature Damage. Knocks back nearby enemies.",
     upgrades: [
       { name: "Weeping Roots", rarity: "Uncommon", desc: "Leaves Bog Water puddle dealing 4 Bog Damage." },
       { name: "Rootball", rarity: "Uncommon", desc: "+4% damage, increased knockback." },
@@ -1323,7 +1323,7 @@ export const SKILLS = [
   },
   {
     id: "natures_embrace", name: "Nature's Embrace", element: "Nature", tier: "Masterful",
-    description: "Channel a healing ring for yourself and party. 25–75 Nature Healing based on channel duration. Max efficiency: 30% heal per tick.",
+    description: "Channel a healing ring for yourself and party. 22.5-67.5 Nature Healing based on channel duration, scales with Nature scaling, and no longer has a max heal cap.",
     upgrades: [
       { name: "Concentrated Matter", rarity: "Uncommon", desc: "0.25s faster max efficiency." },
       { name: "Life Unbound", rarity: "Unique", desc: "+50% heal, costs 10 more mana. Locks Blooming Seed.", locks: ["Blooming Seed"] },
@@ -1337,7 +1337,7 @@ export const SKILLS = [
     description: "Slash your enemy with decay-infused power. 7.22 Disease Damage on hit.",
     upgrades: [
       { name: "Infection", rarity: "Uncommon", desc: "Reduces enemy healing by 10%." },
-      { name: "Tetanus", rarity: "Uncommon", desc: "Applies Bleed (2 Physical Damage/sec for 3s)." },
+      { name: "Rabid Slash", rarity: "Uncommon", desc: "Applies Rabies (Disease debuff) instead of Bleed." },
       { name: "Rust", rarity: "Unique", desc: "Parried Decaying Slice prevents enemy cooldown reset." },
     ]
   },
@@ -1345,12 +1345,12 @@ export const SKILLS = [
     id: "fetid_strike", name: "Fetid Strike", element: "Disease", tier: "Intermediate",
     description: "Imbue your arm with disease and strike. 7.5 Disease Damage + 2.2 Disease Damage/sec for 10 seconds.",
     upgrades: [
-      { name: "Fetid Slash", rarity: "Common", desc: "Applies Bleed (2.5 Damage/sec for 10s)." },
+      { name: "Fevergash", rarity: "Common", desc: "Applies Fever (Disease debuff) instead of Bleed." },
     ]
   },
   {
     id: "pestilence", name: "Pestilence", element: "Disease", tier: "Intermediate",
-    description: "Unleash a wave of plague around you. 2.25 Disease Damage/sec for 15 seconds.",
+    description: "Unleash a wave of plague around you. 1.25 Disease Damage/sec for 15 seconds.",
     upgrades: [
       { name: "Pandemic", rarity: "Uncommon", desc: "+4 studs AoE." },
       { name: "Necrotic Pestilence", rarity: "Rare", desc: "Now affects enemies without 'Rot'." },
@@ -1487,7 +1487,7 @@ export const SKILLS = [
   },
   {
     id: "enlightenment", name: "Enlightenment", element: "Holy", tier: "Advanced",
-    description: "Heal beam for 2.15 Health/sec. Holds on allies or self.",
+    description: "Heal beam for 2.15 Health/sec in a 28 range and heals multiple times per second. Holds on allies or self.",
     upgrades: [
       { name: "Zen Energy", rarity: "Rare", desc: "+20% healing." },
       { name: "Inner Peace", rarity: "Unique", desc: "Heals 1 additional target, split healing, +15% more. Locks One's Inner Eye.", locks: ["One's Inner Eye"] },

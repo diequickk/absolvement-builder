@@ -36,9 +36,9 @@ export default function BuildCalculator() {
           <h1 className="text-5xl font-extrabold tracking-widest text-shadow-lg mb-2">
             ABSOLVEMENT
           </h1>
-          <p className="text-xs tracking-widest text-gray-400 uppercase">
-            Build Planner • {gamePatchInfo?.currentPatch || 'v1.0.0'}
-          </p>
+<p className="text-xs tracking-widest text-gray-400 uppercase">
+  Build Planner • {gamePatchInfo?.currentPatch ? gamePatchInfo.currentPatch.toUpperCase() : 'V1.0.0'}
+</p>
         </header>
 
         {/* 🛠️ Top Bar: Build Name Input & Save Utility Action Row */}

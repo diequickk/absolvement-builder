@@ -68,8 +68,8 @@ const SINS = [
     name: 'Pride',
     icon: BASE + "7aba24992_image_2026-03-09_132604262.png",
     description: 'Refuse help from others due to superiority complex.',
-    effect: 'Healing over 60% max HP grants Fragility debuff',
-    burden: 'Fragility considers additional healing forms'
+    effect: 'Healing over 50% max HP grants Fragility debuff',
+    burden: 'Fragility threshold is reduced to 40% max HP and considers additional healing forms'
   },
   {
     id: 'pseudoprophecy',

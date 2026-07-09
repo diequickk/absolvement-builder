@@ -7,6 +7,7 @@ import { Link } from "lucide-react";
 import { toast } from "../lib/toast";
 import { compressToEncodedURIComponent, decompressFromEncodedURIComponent } from 'lz-string';
 import OilBackground from "../components/OilBackground";
+import OriginSelectionOverlay from "../components/builder/OriginSelectionOverlay";
 
 const RaceSelector = lazy(() => import("../components/builder/RaceSelector"));
 const WeaponSelector = lazy(() => import("../components/builder/WeaponSelector"));
@@ -24,7 +25,7 @@ const BRANDED_SLUG_PREFIX = 'abs-builder';
 const BUILD_CODE_VERSION = 'v0.2';
 const LEGACY_CODE_VERSION = 'v0.1';
 const MAX_SHARE_URL_LENGTH = 2048;
-const SITE_VERSION = '0.1';
+const SITE_VERSION = '0.3';
 
 function getIdValue(value) {
   if (!value) return null;
@@ -289,6 +290,7 @@ async function copyToClipboard(text) {
 export default function Builder() {
   const [activeTab, setActiveTab] = useState('race');
   const [mountedTabs, setMountedTabs] = useState(() => new Set(['race']));
+  const [showOriginOverlay, setShowOriginOverlay] = useState(true);
   const [buildName, setBuildName] = useState("");
   const [race, setRace] = useState(null);
   const [weapon, setWeapon] = useState(null);
@@ -329,6 +331,12 @@ export default function Builder() {
     toast.error("Could not copy build code");
   }, [currentBuildCode]);
 
+  const handleOriginSelection = useCallback((originId) => {
+    setRace(originId);
+    setActiveTab('race');
+    setShowOriginOverlay(false);
+  }, []);
+
   const applyBuildData = (buildData, code = "") => {
     const nextState = expandBuildState(buildData);
 
@@ -341,6 +349,7 @@ export default function Builder() {
     setSkills(nextState.skills || []);
     setPotentials(nextState.potentials || []);
     setBuildExplanation(nextState.buildExplanation || "");
+    setShowOriginOverlay(false);
 
     if (code) {
       setCurrentBuildCode(code);
@@ -359,7 +368,7 @@ export default function Builder() {
 
       applyBuildData(directSharedBuildData.buildData, directSharedBuildData.sharedCode);
       toast.success("Build loaded from share link!");
-      return;
+      return true;
     }
 
     const parsedInputCode = parseBuildCode(normalizedInput);
@@ -370,7 +379,7 @@ export default function Builder() {
       if (cachedBuild) {
         applyBuildData(cachedBuild, parsedInputCode.normalizedCode || normalizedCode);
         toast.success("Build loaded from code!");
-        return;
+        return true;
       }
     }
 
@@ -386,15 +395,16 @@ export default function Builder() {
 
       applyBuildData(sharedBuildData.buildData, sharedCode);
       toast.success("Build loaded from share link!");
-      return;
+      return true;
     }
 
     if (!normalizedInput) {
       toast.error("Please enter a build code or share link");
-      return;
+      return false;
     }
 
     toast.error("Could not load that code or link");
+    return false;
   };
 
   useEffect(() => {
@@ -482,7 +492,19 @@ export default function Builder() {
   return (
     <div className="relative min-h-screen bg-black text-white">
       <OilBackground />
-      <div className="relative z-10 container mx-auto px-4 py-8">
+      {showOriginOverlay ? (
+        <OriginSelectionOverlay
+          codeInput={codeInput}
+          onCodeInputChange={setCodeInput}
+          onLoadCode={() => loadBuildByCode(codeInput)}
+          onSelectOrigin={handleOriginSelection}
+        />
+      ) : null}
+
+      <div
+        className={`relative z-10 container mx-auto px-4 py-8 transition-[filter] duration-300 ${showOriginOverlay ? 'pointer-events-none select-none' : ''}`}
+        style={{ filter: showOriginOverlay ? 'blur(15px) brightness(0.3)' : 'none' }}
+      >
         {/* Header */}
         <div className="mb-10 flex flex-col items-center text-center pt-4">
           {/* Top ornament */}
